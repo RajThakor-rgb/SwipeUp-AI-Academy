@@ -9,8 +9,8 @@ export function cn(...inputs: ClassValue[]) {
 export function calculateOverallProgress(progress: AcademyProgress): number {
   let totalProgress = 0;
   
-  // Course 1: 20% of total (binary - completed or not)
-  if (progress.course1Completed) {
+  // Course 1: 20% of total (completed if they have a code OR course1Completed is true)
+  if (progress.course1Completed || progress.course1CompletionCode) {
     totalProgress += 20;
   }
   
@@ -19,17 +19,17 @@ export function calculateOverallProgress(progress: AcademyProgress): number {
   const course2ModulesProgress = (progress.course2ModulesCompleted.length / 5) * 20;
   totalProgress += course2ModulesProgress;
   
-  // Course 3: 20% of total (binary for now)
+  // Course 3: 20% of total
   if (progress.course3Completed) {
     totalProgress += 20;
   }
   
-  // Course 4: 20% of total (binary for now)
+  // Course 4: 20% of total
   if (progress.course4Completed) {
     totalProgress += 20;
   }
   
-  // Course 5: 20% of total (binary for now)
+  // Course 5: 20% of total
   if (progress.course5Completed) {
     totalProgress += 20;
   }
