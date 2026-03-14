@@ -38,9 +38,9 @@ export default function WelcomePage() {
       return;
     }
 
-    const idPattern = /^0[0-9]{7}$/;
+    const idPattern = /^0[0-9]{6}$/;
     if (!idPattern.test(studentId)) {
-      setError('Please check your Student ID. It must start with 0 and be 8 digits long.');
+      setError('Please check your Student ID. It must start with 0 and be 7 digits long.');
       return;
     }
 
@@ -173,12 +173,12 @@ export default function WelcomePage() {
                 <input
                   type="text"
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
-                  placeholder="01234567"
+                  onChange={(e) => setStudentId(e.target.value.replace(/[^0-9]/g, '').slice(0, 7))}
+                  placeholder="0123456"
                   className="w-full px-4 py-3 bg-background border border-border rounded-lg text-white placeholder:text-slate-500 focus:border-gold transition-colors font-mono tracking-wider"
                 />
                 <p className="text-xs text-slate-500 mt-1.5">
-                  Your Student ID starts with 0 followed by 7 digits, for example 01234567
+                  Your Student ID starts with 0 followed by 6 digits, for example 0123456
                 </p>
               </div>
 
