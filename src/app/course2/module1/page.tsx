@@ -1,13 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAcademyProgress } from '@/hooks/useAcademyProgress';
-import { cn } from '@/lib/utils';
 import { logProgress } from '@/lib/notion';
+import { cn } from '@/lib/utils';
 
-// MCQ Questions
-const mcqQuestions = [
+// Types
+type Phase = 'prepare' | 'engage' | 'consolidate';
+type EngageStage = 'iDo' | 'weDo' | 'youDo' | 'final';
+
+interface MCQQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correct: number;
+}
+
+// MCQ Questions (exactly as specified)
+const mcqQuestions: MCQQuestion[] = [
   {
     id: 'q1',
     question: 'According to Kaplan and Haenlein (2019), which of the following best describes artificial intelligence?',
@@ -67,235 +78,554 @@ const mcqQuestions = [
 
 // Video resources
 const videos = [
-  { title: 'Prompt Engineering for Beginners', duration: '15 min', url: 'https://www.youtube.com/watch?v=_ZvnD73m40o' },
-  { title: 'How to Write Better AI Prompts for Business', duration: '10 min', url: 'https://www.youtube.com/watch?v=jC4v5AS4RIM' },
-  { title: 'ChatGPT Prompt Engineering Course', duration: '20 min', url: 'https://www.youtube.com/watch?v=mBYu5NdD9XU' },
+  { title: 'Prompt Engineering Fundamentals', duration: '12 min', url: 'https://www.youtube.com/watch?v=_ZvnD73m40o' },
+  { title: 'Business Prompt Writing Guide', duration: '8 min', url: 'https://www.youtube.com/watch?v=jC4v5AS4RIM' },
+  { title: 'Advanced Prompting Techniques', duration: '15 min', url: 'https://www.youtube.com/watch?v=mBYu5NdD9XU' },
 ];
 
-type Phase = 'prepare' | 'engage' | 'complete';
-type EngageStep = 'iDo' | 'weDo' | 'youDo' | 'final';
-type WeDoCard = 1 | 2 | 3;
-type YouDoChallenge = 1 | 2 | 3;
+// Phase Progress Indicator Component
+function PhaseIndicator({ currentPhase }: { currentPhase: Phase }) {
+  const phases = [
+    { id: 'prepare', label: 'Prepare', icon: '📖' },
+    { id: 'engage', label: 'Engage', icon: '🎯' },
+    { id: 'consolidate', label: 'Consolidate', icon: '🏅' },
+  ];
 
+  return (
+    <div className="flex items-center justify-center gap-2 mb-6">
+      {phases.map((phase, idx) => {
+        const isActive = phase.id === currentPhase;
+        const isPast = phases.findIndex(p => p.id === currentPhase) > idx;
+        
+        return (
+          <div key={phase.id} className="flex items-center">
+            <div className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-full border transition-all",
+              isActive && "bg-gold text-navy border-gold",
+              isPast && "bg-green-500/20 text-green-400 border-green-500/50",
+              !isActive && !isPast && "bg-slate-800 text-slate-400 border-slate-700"
+            )}>
+              <span>{phase.icon}</span>
+              <span className="text-sm font-medium">{phase.label}</span>
+            </div>
+            {idx < phases.length - 1 && (
+              <div className={cn(
+                "w-8 h-0.5 mx-1",
+                isPast ? "bg-green-500" : "bg-slate-700"
+              )} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Slack Message Component
+function SlackMessage({ from, avatar, message, time }: { from: string; avatar: string; message: string; time: string }) {
+  return (
+    <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 mb-4 animate-slide-in">
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-lg bg-gold flex items-center justify-center text-navy font-bold shrink-0">
+          {avatar}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-semibold text-white">{from}</span>
+            <span className="text-xs text-slate-500">{time}</span>
+          </div>
+          <p className="text-slate-300 text-sm leading-relaxed">{message}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Intel File Card Component
+function IntelFileCard({ title, subtitle, read, onToggle }: { title: string; subtitle: string; read: boolean; onToggle: () => void }) {
+  return (
+    <div className={cn(
+      "bg-slate-900/80 border rounded-lg p-4 transition-all cursor-pointer",
+      read ? "border-green-500/50 bg-green-500/5" : "border-slate-700 hover:border-gold/50"
+    )} onClick={onToggle}>
+      <div className="flex items-start gap-3">
+        <div className={cn(
+          "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+          read ? "bg-green-500/20 text-green-400" : "bg-navy text-gold"
+        )}>
+          {read ? '✓' : '📄'}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-white text-sm">{title}</h4>
+          <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+        </div>
+        <div className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded">
+          {read ? 'READ' : 'READ?'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Video Card Component
+function VideoCard({ title, duration, url, watched, onToggle }: { title: string; duration: string; url: string; watched: boolean; onToggle: () => void }) {
+  return (
+    <a 
+      href={url} 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className={cn(
+        "bg-slate-900/80 border rounded-lg p-4 transition-all block group",
+        watched ? "border-green-500/50" : "border-slate-700 hover:border-gold/50"
+      )}
+      onClick={onToggle}
+    >
+      <div className="flex items-start gap-3">
+        <div className={cn(
+          "w-16 h-12 rounded bg-slate-800 flex items-center justify-center shrink-0 group-hover:bg-navy transition-colors",
+          watched && "bg-green-500/20"
+        )}>
+          {watched ? (
+            <span className="text-green-400">✓</span>
+          ) : (
+            <span className="text-gold text-xl">▶</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-medium text-white text-sm group-hover:text-gold transition-colors">{title}</h4>
+          <p className="text-xs text-slate-500 mt-1">{duration}</p>
+        </div>
+        <span className="text-slate-400 group-hover:text-gold transition-colors">↗</span>
+      </div>
+    </a>
+  );
+}
+
+// MCQ Gate Component
+function MCQGate({ onComplete }: { onComplete: () => void }) {
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
+  const [showRetry, setShowRetry] = useState(false);
+
+  const handleSubmit = () => {
+    let correct = 0;
+    mcqQuestions.forEach(q => {
+      if (answers[q.id] === q.correct) correct++;
+    });
+    setScore(correct);
+    setSubmitted(true);
+
+    if (correct === 5) {
+      setTimeout(onComplete, 1500);
+    } else {
+      setShowRetry(true);
+    }
+  };
+
+  const handleRetry = () => {
+    setAnswers({});
+    setSubmitted(false);
+    setScore(0);
+    setShowRetry(false);
+  };
+
+  return (
+    <div className="bg-slate-900/80 border border-slate-700 rounded-xl overflow-hidden">
+      <div className="bg-navy px-4 py-3 border-b border-gold/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-gold text-lg">🔐</span>
+            <h3 className="text-white font-semibold">Security Clearance</h3>
+          </div>
+          <span className="text-xs text-slate-400">Score 5/5 to proceed</span>
+        </div>
+      </div>
+
+      <div className="p-4 space-y-4">
+        {mcqQuestions.map((q, idx) => (
+          <div key={q.id} className="space-y-2">
+            <p className="text-white text-sm font-medium">
+              {idx + 1}. {q.question}
+            </p>
+            <div className="grid gap-2">
+              {q.options.map((opt, optIdx) => (
+                <label
+                  key={optIdx}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                    submitted && optIdx === q.correct && "bg-green-500/20 border-green-500",
+                    submitted && answers[q.id] === optIdx && optIdx !== q.correct && "bg-red-500/20 border-red-500",
+                    !submitted && answers[q.id] === optIdx && "bg-gold/10 border-gold",
+                    !submitted && answers[q.id] !== optIdx && "bg-slate-800 border-slate-700 hover:border-gold/50"
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name={q.id}
+                    checked={answers[q.id] === optIdx}
+                    onChange={() => !submitted && setAnswers(prev => ({ ...prev, [q.id]: optIdx }))}
+                    className="text-gold"
+                    disabled={submitted}
+                  />
+                  <span className="text-sm text-slate-300">{opt}</span>
+                  {submitted && optIdx === q.correct && (
+                    <span className="ml-auto text-green-400 text-xs">✓ Correct</span>
+                  )}
+                  {submitted && answers[q.id] === optIdx && optIdx !== q.correct && (
+                    <span className="ml-auto text-red-400 text-xs">✗ Incorrect</span>
+                  )}
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {submitted && (
+          <div className={cn(
+            "p-4 rounded-lg text-center",
+            score === 5 ? "bg-green-500/20 border border-green-500/50" : "bg-gold/10 border border-gold/30"
+          )}>
+            <p className={cn("font-bold text-lg", score === 5 ? "text-green-400" : "text-gold")}>
+              {score === 5 && "🎉 Security Clearance Granted! Proceeding to Engage phase..."}
+              {score === 4 && "Almost there! One more try."}
+              {score <= 3 && "Some material needs another look. Please review and retry."}
+            </p>
+            <p className="text-slate-400 text-sm mt-2">Score: {score}/5</p>
+          </div>
+        )}
+
+        {!submitted ? (
+          <button
+            onClick={handleSubmit}
+            disabled={Object.keys(answers).length < 5}
+            className="w-full py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Submit for Verification
+          </button>
+        ) : showRetry && score < 5 ? (
+          <button
+            onClick={handleRetry}
+            className="w-full py-3 bg-navy border border-gold text-gold rounded-lg font-semibold hover:bg-navy-light transition-all"
+          >
+            Retry Clearance Check
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// Task Card Component
+function TaskCard({ title, children, badge }: { title: string; children: React.ReactNode; badge?: string }) {
+  return (
+    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5 mb-4 animate-slide-in">
+      {badge && (
+        <div className="inline-block px-2 py-1 bg-gold/20 text-gold text-xs rounded mb-3">
+          {badge}
+        </div>
+      )}
+      <h4 className="text-white font-semibold mb-4">{title}</h4>
+      {children}
+    </div>
+  );
+}
+
+// Score Breakdown Component
+function ScoreBreakdown({ criteria }: { criteria: { name: string; passed: boolean }[] }) {
+  const passedCount = criteria.filter(c => c.passed).length;
+  
+  return (
+    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mt-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-white">Score Breakdown</span>
+        <span className={cn(
+          "text-sm font-bold",
+          passedCount >= 4 ? "text-green-400" : passedCount >= 2 ? "text-gold" : "text-red-400"
+        )}>
+          {passedCount}/{criteria.length}
+        </span>
+      </div>
+      <div className="space-y-2">
+        {criteria.map((c, idx) => (
+          <div key={idx} className="flex items-center justify-between text-sm">
+            <span className="text-slate-400">{c.name}</span>
+            <span className={c.passed ? "text-green-400" : "text-red-400"}>
+              {c.passed ? '✓' : '✗'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// XP Animation Component
+function XPCounter({ amount }: { amount: number }) {
+  return (
+    <div className="text-center animate-fade-in">
+      <span className="text-gold text-lg font-bold">+{amount} XP</span>
+    </div>
+  );
+}
+
+// Main Module 1 Component
 export default function Module1Page() {
   const router = useRouter();
-  const { progress, isLoaded, addXP, addBadge, completeModule2, completePrepare2, updateProgress } = useAcademyProgress();
-
+  const { progress, isLoaded, addXP, addBadge, completeModule2, completePrepare2 } = useAcademyProgress();
+  
   // Phase state
   const [phase, setPhase] = useState<Phase>('prepare');
-
+  const [moduleXP, setModuleXP] = useState(0);
+  
   // Prepare state
-  const [mcqAnswers, setMcqAnswers] = useState<Record<string, number>>({});
-  const [mcqSubmitted, setMcqSubmitted] = useState(false);
-  const [mcqScore, setMcqScore] = useState(0);
-  const [prepareLoading, setPrepareLoading] = useState(false);
-
+  const [paper1Read, setPaper1Read] = useState(false);
+  const [paper2Read, setPaper2Read] = useState(false);
+  const [videosWatched, setVideosWatched] = useState<boolean[]>([false, false, false]);
+  const [mcqComplete, setMcqComplete] = useState(false);
+  
   // Engage state
-  const [engageStep, setEngageStep] = useState<EngageStep>('iDo');
+  const [engageStage, setEngageStage] = useState<EngageStage>('iDo');
   const [iDoWatched, setIDoWatched] = useState(false);
-  const [weDoCard, setWeDoCard] = useState<WeDoCard>(1);
-  const [weDoCard1Answers, setWeDoCard1Answers] = useState<string[]>([]);
-  const [weDoCard2Text, setWeDoCard2Text] = useState('');
-  const [weDoCard2Score, setWeDoCard2Score] = useState<number | null>(null);
-  const [weDoCard3Text, setWeDoCard3Text] = useState('');
-  const [weDoCard3Score, setWeDoCard3Score] = useState<number | null>(null);
-  const [weDoCompleted, setWeDoCompleted] = useState(false);
-
-  const [youDoChallenge, setYouDoChallenge] = useState<YouDoChallenge>(1);
+  
+  // We Do state
+  const [weDoTask, setWeDoTask] = useState(1);
+  const [weDo1Answers, setWeDo1Answers] = useState<string[]>([]);
+  const [weDo1Complete, setWeDo1Complete] = useState(false);
+  const [weDo2Text, setWeDo2Text] = useState('');
+  const [weDo2Score, setWeDo2Score] = useState<{ name: string; passed: boolean }[] | null>(null);
+  const [weDo3Text, setWeDo3Text] = useState('');
+  const [weDo3Score, setWeDo3Score] = useState<{ name: string; passed: boolean }[] | null>(null);
+  
+  // You Do state
+  const [youDoTask, setYouDoTask] = useState(1);
   const [youDo1Text, setYouDo1Text] = useState('');
-  const [youDo1Score, setYouDo1Score] = useState<number | null>(null);
+  const [youDo1Score, setYouDo1Score] = useState<{ name: string; passed: boolean }[] | null>(null);
   const [youDo2Text, setYouDo2Text] = useState('');
-  const [youDo2Score, setYouDo2Score] = useState<number | null>(null);
+  const [youDo2Score, setYouDo2Score] = useState<{ name: string; passed: boolean }[] | null>(null);
   const [youDo3Text, setYouDo3Text] = useState('');
-  const [youDo3Score, setYouDo3Score] = useState<number | null>(null);
-
+  const [youDo3Score, setYouDo3Score] = useState<{ name: string; passed: boolean }[] | null>(null);
+  
+  // Final challenge state
   const [finalPrompt, setFinalPrompt] = useState('');
   const [finalExplanation, setFinalExplanation] = useState('');
-  const [finalScore, setFinalScore] = useState<number | null>(null);
-
-  const [moduleXP, setModuleXP] = useState(0);
+  const [finalScore, setFinalScore] = useState<{ name: string; passed: boolean }[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect checks
   useEffect(() => {
-    if (isLoaded) {
-      if (!progress.studentName) {
-        router.push('/');
-      } else if (!progress.course2Unlocked) {
-        router.push('/dashboard');
-      } else if (progress.course2ModulesCompleted.includes(1)) {
-        router.push('/course2');
-      } else if (progress.course2PrepareCompleted.includes(1)) {
-        setPhase('engage');
-      }
+    if (isLoaded && !progress.studentName) {
+      router.push('/');
     }
-  }, [isLoaded, progress.studentName, progress.course2Unlocked, progress.course2ModulesCompleted, progress.course2PrepareCompleted, router]);
+  }, [isLoaded, progress.studentName, router]);
 
-  // MCQ scoring
-  const handleMcqSubmit = async () => {
-    let correct = 0;
-    mcqQuestions.forEach(q => {
-      if (mcqAnswers[q.id] === q.correct) correct++;
+  // Check if returning user
+  useEffect(() => {
+    if (progress.course2PrepareCompleted.includes(1)) {
+      setMcqComplete(true);
+      setPaper1Read(true);
+      setPaper2Read(true);
+      setPhase('engage');
+    }
+  }, [progress.course2PrepareCompleted]);
+
+  // Handle MCQ complete
+  const handleMcqComplete = async () => {
+    setMcqComplete(true);
+    completePrepare2(1);
+    setPhase('engage');
+    
+    // Log prepare complete
+    await logProgress({
+      studentName: progress.studentName,
+      studentId: progress.studentId,
+      event: 'Module 1 Prepare Complete',
+      details: 'MCQ passed with 5/5 score',
+      totalXP: progress.totalXP,
     });
-    setMcqScore(correct);
-    setMcqSubmitted(true);
-
-    if (correct === 5) {
-      setPrepareLoading(true);
-      completePrepare2(1);
-      await logProgress({
-        studentName: progress.studentName,
-        studentId: progress.studentId,
-        event: 'Module 1 Prepare Complete',
-        details: 'MCQ score: 5/5',
-        totalXP: progress.totalXP,
-      });
-      setTimeout(() => {
-        setPhase('engage');
-        setPrepareLoading(false);
-      }, 1500);
-    }
   };
 
-  const resetMcq = () => {
-    setMcqAnswers({});
-    setMcqSubmitted(false);
-    setMcqScore(0);
-  };
-
-  // We Do Card 1 check
-  const checkWeDoCard1 = () => {
+  // We Do Task 1 - Multiple selection
+  const handleWeDo1Submit = () => {
     const allCorrect = ['No role assigned to the AI', 'No output format specified', 'No brand context provided', 'No target audience mentioned'];
-    const isAllSelected = allCorrect.every(opt => weDoCard1Answers.includes(opt));
+    const isAllSelected = allCorrect.every(opt => weDo1Answers.includes(opt));
     if (isAllSelected) {
-      addXP(25);
-      setModuleXP(prev => prev + 25);
-      setWeDoCard(2);
+      setWeDo1Complete(true);
+      setWeDoTask(2);
     }
   };
 
-  // Rule-based scoring for We Do Card 2
-  const checkWeDoCard2 = () => {
-    const text = weDoCard2Text.toLowerCase();
-    let score = 0;
-    if (text.includes('act as') || text.includes('you are') || text.includes('as a')) score++;
-    if (text.includes('instagram') || text.includes('social media') || text.includes('post')) score++;
-    if (text.includes('velara') || text.includes('brand') || text.includes('fashion') || text.includes('sustainable')) score++;
-    if (text.includes('caption') || text.includes('format') || text.includes('characters') || text.includes('words')) score++;
-    if (weDoCard2Text.split(/\s+/).length >= 30) score++;
-    setWeDoCard2Score(score);
-    addXP(25);
-    setModuleXP(prev => prev + 25);
-    setTimeout(() => setWeDoCard(3), 2000);
-  };
-
-  // Rule-based scoring for We Do Card 3
-  const checkWeDoCard3 = () => {
-    const text = weDoCard3Text.toLowerCase();
-    let score = 0;
-    if (text.includes('customer') || text.includes('complaint') || text.includes('delivery')) score++;
-    if (text.includes('empath') || text.includes('apolog') || text.includes('professional')) score++;
-    if (text.includes('email') || text.includes('response') || text.includes('reply')) score++;
-    if (text.includes('tone') || text.includes('formal') || text.includes('brand voice')) score++;
-    if (weDoCard3Text.split(/\s+/).length >= 40) score++;
-    setWeDoCard3Score(score);
-    addXP(50);
-    setModuleXP(prev => prev + 50);
+  // We Do Task 2 - Rule-based scoring
+  const handleWeDo2Submit = () => {
+    const text = weDo2Text.toLowerCase();
+    const criteria = [
+      { name: 'Role Assignment', passed: text.includes('act as') || text.includes('you are') || text.includes('as a') },
+      { name: 'Platform Context', passed: text.includes('instagram') || text.includes('social media') || text.includes('post') },
+      { name: 'Brand Reference', passed: text.includes('velara') || text.includes('brand') || text.includes('fashion') || text.includes('sustainable') },
+      { name: 'Format Specification', passed: text.includes('caption') || text.includes('format') || text.includes('characters') || text.includes('words') },
+      { name: 'Sufficient Detail', passed: weDo2Text.split(/\s+/).length >= 30 },
+    ];
+    setWeDo2Score(criteria);
+    
+    const xp = 25;
+    setModuleXP(prev => prev + xp);
+    addXP(xp);
+    
     setTimeout(() => {
-      setWeDoCompleted(true);
-      setEngageStep('youDo');
+      setWeDoTask(3);
     }, 2000);
   };
 
-  // You Do Challenge scoring
+  // We Do Task 3
+  const handleWeDo3Submit = () => {
+    const text = weDo3Text.toLowerCase();
+    const criteria = [
+      { name: 'Customer Context', passed: text.includes('customer') || text.includes('complaint') || text.includes('delivery') },
+      { name: 'Empathy Language', passed: text.includes('empath') || text.includes('apolog') || text.includes('professional') },
+      { name: 'Email Format', passed: text.includes('email') || text.includes('response') || text.includes('reply') },
+      { name: 'Tone Specification', passed: text.includes('tone') || text.includes('formal') || text.includes('brand voice') },
+      { name: 'Sufficient Detail', passed: weDo3Text.split(/\s+/).length >= 40 },
+    ];
+    setWeDo3Score(criteria);
+    
+    const xp = 50;
+    setModuleXP(prev => prev + xp);
+    addXP(xp);
+    
+    setTimeout(() => {
+      setEngageStage('youDo');
+    }, 2000);
+  };
+
+  // You Do Challenge scoring functions
   const checkYouDo1 = () => {
     const text = youDo1Text.toLowerCase();
-    let score = 0;
-    if (text.includes('act as') || text.includes('you are') || text.includes('as a')) score++;
-    if (text.includes('velara') || text.includes('midnight edit')) score++;
-    if (text.includes('150') || text.includes('word count') || text.includes('length')) score++;
-    if (text.includes('sophisticated') || text.includes('sustainable') || text.includes('british') || text.includes('elegant')) score++;
-    if (text.includes('description') || text.includes('paragraph') || text.includes('copy')) score++;
-
-    setYouDo1Score(score);
-    const earned = score >= 4 ? 100 : score >= 2 ? 50 : 0;
-    addXP(earned);
-    setModuleXP(prev => prev + earned);
-    setTimeout(() => setYouDoChallenge(2), 2000);
+    const criteria = [
+      { name: 'Role Assigned', passed: text.includes('act as') || text.includes('you are') || text.includes('as a') },
+      { name: 'Product Mentioned', passed: text.includes('velara') || text.includes('midnight edit') },
+      { name: 'Length Specified', passed: text.includes('150') || text.includes('word count') || text.includes('length') },
+      { name: 'Brand Voice', passed: text.includes('sophisticated') || text.includes('sustainable') || text.includes('british') || text.includes('elegant') },
+      { name: 'Output Format', passed: text.includes('description') || text.includes('paragraph') || text.includes('copy') },
+    ];
+    setYouDo1Score(criteria);
+    
+    const score = criteria.filter(c => c.passed).length;
+    const xp = score >= 4 ? 100 : score >= 2 ? 50 : 0;
+    setModuleXP(prev => prev + xp);
+    addXP(xp);
+    
+    logProgress({
+      studentName: progress.studentName,
+      studentId: progress.studentId,
+      event: 'You Do Challenge 1 Complete',
+      details: `Score: ${score}/5, XP: ${xp}`,
+      totalXP: progress.totalXP + xp,
+    });
+    
+    setTimeout(() => setYouDoTask(2), 2000);
   };
 
   const checkYouDo2 = () => {
     const text = youDo2Text.toLowerCase();
-    let score = 0;
-    if (text.includes('5') || text.includes('five')) score++;
-    if (text.includes('150') || text.includes('character')) score++;
-    if (text.includes('emoji')) score++;
-    if (text.includes('hashtag')) score++;
-    if (youDo2Text.split(/\s+/).length >= 50) score++;
-
-    setYouDo2Score(score);
-    const earned = score >= 4 ? 150 : score >= 2 ? 75 : 0;
-    addXP(earned);
-    setModuleXP(prev => prev + earned);
-    setTimeout(() => setYouDoChallenge(3), 2000);
+    const criteria = [
+      { name: 'Quantity Specified', passed: text.includes('5') || text.includes('five') },
+      { name: 'Character Limit', passed: text.includes('150') || text.includes('character') },
+      { name: 'Emoji Requirement', passed: text.includes('emoji') },
+      { name: 'Hashtag Requirement', passed: text.includes('hashtag') },
+      { name: 'Sufficient Detail', passed: youDo2Text.split(/\s+/).length >= 50 },
+    ];
+    setYouDo2Score(criteria);
+    
+    const score = criteria.filter(c => c.passed).length;
+    const xp = score >= 4 ? 150 : score >= 2 ? 75 : 0;
+    setModuleXP(prev => prev + xp);
+    addXP(xp);
+    
+    logProgress({
+      studentName: progress.studentName,
+      studentId: progress.studentId,
+      event: 'You Do Challenge 2 Complete',
+      details: `Score: ${score}/5, XP: ${xp}`,
+      totalXP: progress.totalXP + xp,
+    });
+    
+    setTimeout(() => setYouDoTask(3), 2000);
   };
 
   const checkYouDo3 = () => {
     const text = youDo3Text.toLowerCase();
-    let score = 0;
-    if (text.includes('empath') || text.includes('apolog')) score++;
-    if (text.includes('10%') || text.includes('discount') || text.includes('compensation')) score++;
-    if (text.includes('brand voice') || text.includes('tone') || text.includes('sophisticated')) score++;
-    if (text.includes('template') || text.includes('personal') || text.includes('generic')) score++;
-    if (youDo3Text.split(/\s+/).length >= 60) score++;
-
-    setYouDo3Score(score);
-    const earned = score >= 4 ? 200 : score >= 2 ? 100 : 0;
-    addXP(earned);
-    setModuleXP(prev => prev + earned);
-    setTimeout(() => setEngageStep('final'), 2000);
+    const criteria = [
+      { name: 'Empathy/Apology', passed: text.includes('empath') || text.includes('apolog') },
+      { name: 'Discount Mentioned', passed: text.includes('10%') || text.includes('discount') || text.includes('compensation') },
+      { name: 'Brand Voice', passed: text.includes('brand voice') || text.includes('tone') || text.includes('sophisticated') },
+      { name: 'Personalization', passed: text.includes('template') || text.includes('personal') || text.includes('generic') },
+      { name: 'Sufficient Detail', passed: youDo3Text.split(/\s+/).length >= 60 },
+    ];
+    setYouDo3Score(criteria);
+    
+    const score = criteria.filter(c => c.passed).length;
+    const xp = score >= 4 ? 200 : score >= 2 ? 100 : 0;
+    setModuleXP(prev => prev + xp);
+    addXP(xp);
+    
+    logProgress({
+      studentName: progress.studentName,
+      studentId: progress.studentId,
+      event: 'You Do Challenge 3 Complete',
+      details: `Score: ${score}/5, XP: ${xp}`,
+      totalXP: progress.totalXP + xp,
+    });
+    
+    setTimeout(() => setEngageStage('final'), 2000);
   };
 
-  // Final Challenge scoring
-  const checkFinalChallenge = async () => {
+  // Final Challenge
+  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
+    
     const promptText = finalPrompt.toLowerCase();
     const explainText = finalExplanation.toLowerCase();
-
-    let promptScore = 0;
-    if (promptText.includes('act as') || promptText.includes('you are') || promptText.includes('as a')) promptScore++;
-    if (promptText.includes('board') || promptText.includes('director') || promptText.includes('stakeholder') || promptText.includes('executive')) promptScore++;
-    if (promptText.includes('sales') || promptText.includes('revenue') || promptText.includes('performance') || promptText.includes('update')) promptScore++;
-    if (promptText.includes('bullet') || promptText.includes('section') || promptText.includes('summary') || promptText.includes('format')) promptScore++;
-    if (finalPrompt.split(/\s+/).length >= 40) promptScore++;
-
-    let explainScore = 0;
-    if (finalExplanation.split(/\s+/).length >= 30) explainScore++;
-    if (explainText.includes('missing') || explainText.includes('lack') || explainText.includes('vague') || explainText.includes('unclear')) explainScore++;
-    if (explainText.includes('context') || explainText.includes('specific') || explainText.includes('detail') || explainText.includes('audience')) explainScore++;
-
-    const totalScore = promptScore + explainScore;
-    setFinalScore(totalScore);
-
-    const earned = totalScore >= 6 ? 250 : totalScore >= 4 ? 150 : 75;
-    const newXP = moduleXP + earned;
-    addXP(earned);
-    addBadge('Prompt Specialist');
+    
+    const promptCriteria = [
+      { name: 'Role Assigned', passed: promptText.includes('act as') || promptText.includes('you are') || promptText.includes('as a') },
+      { name: 'Board Mentioned', passed: promptText.includes('board') || promptText.includes('director') || promptText.includes('stakeholder') || promptText.includes('executive') },
+      { name: 'Sales Context', passed: promptText.includes('sales') || promptText.includes('revenue') || promptText.includes('performance') || promptText.includes('update') },
+      { name: 'Format Specified', passed: promptText.includes('bullet') || promptText.includes('section') || promptText.includes('summary') || promptText.includes('format') },
+      { name: 'Sufficient Length', passed: finalPrompt.split(/\s+/).length >= 40 },
+    ];
+    
+    const explainCriteria = [
+      { name: 'Sufficient Explanation', passed: finalExplanation.split(/\s+/).length >= 30 },
+      { name: 'Problem Identified', passed: explainText.includes('missing') || explainText.includes('lack') || explainText.includes('vague') || explainText.includes('unclear') },
+      { name: 'Solution Explained', passed: explainText.includes('context') || explainText.includes('specific') || explainText.includes('detail') || explainText.includes('audience') },
+    ];
+    
+    const allCriteria = [...promptCriteria, ...explainCriteria];
+    setFinalScore(allCriteria);
+    
+    const totalScore = allCriteria.filter(c => c.passed).length;
+    const xp = totalScore >= 6 ? 250 : totalScore >= 4 ? 150 : 75;
+    setModuleXP(prev => prev + xp);
+    addXP(xp);
+    
+    // Complete the module
     completeModule2(1);
-
+    addBadge('Prompt Specialist');
+    
     await logProgress({
       studentName: progress.studentName,
       studentId: progress.studentId,
       event: 'Module 1 Complete',
-      details: `Total XP earned in module: ${newXP}`,
-      totalXP: progress.totalXP + earned,
+      details: `Final score: ${totalScore}/8, Total XP earned: ${moduleXP + xp}`,
+      totalXP: progress.totalXP + xp,
     });
-
+    
     setIsSubmitting(false);
-    setPhase('complete');
+    setPhase('consolidate');
   };
 
-  if (!isLoaded || !progress.studentName || !progress.course2Unlocked) {
+  // Loading state
+  if (!isLoaded || !progress.studentName) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="spinner" />
@@ -304,463 +634,446 @@ export default function Module1Page() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-gradient">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-secondary/50 border-b border-border sticky top-0 z-40 backdrop-blur">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <button onClick={() => router.push('/course2')} className="text-slate-400 hover:text-white transition-colors">← Back</button>
-          <div className="flex-1">
-            <h1 className="font-bold text-white">Module 1: Prompt Engineering</h1>
-            <p className="text-xs text-slate-400">Course 2: Productivity and Organisation</p>
+      <header className="bg-navy/95 border-b border-gold/30 sticky top-0 z-50 backdrop-blur">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/course2')}
+              className="text-slate-400 hover:text-white transition-colors text-sm"
+            >
+              ← Mission Board
+            </button>
+            <span className="text-slate-600">|</span>
+            <h1 className="text-white font-bold">Module 1: Prompt Engineering</h1>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-slate-400">XP</p>
-            <p className="text-gold font-bold">{progress.totalXP + moduleXP}</p>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-xs text-slate-400">XP this module</p>
+              <p className="text-gold font-bold">{moduleXP}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400">Total</p>
+              <p className="text-white font-bold">⭐ {progress.totalXP + moduleXP}</p>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        <PhaseIndicator currentPhase={phase} />
+
         {/* PREPARE PHASE */}
         {phase === 'prepare' && (
           <div className="animate-fade-in">
-            <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-8">
-              <p className="text-gold font-medium">Before you can access the simulation you need to complete the Prepare phase. This should take approximately 30 to 45 minutes.</p>
+            {/* Slack notification */}
+            <SlackMessage
+              from="Sarah Chen"
+              avatar="SC"
+              time="9:02 AM"
+              message="We need your help. Our marketing team has been using AI tools for three months and the output is embarrassing. Can you assess what's going wrong and fix it? I've cleared access to our intel files for your review. — Sarah"
+            />
+
+            {/* Intel Files Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <span>📁</span> Intel Files
+              </h2>
+              <span className="text-xs text-slate-500">Review all materials before the briefing</span>
             </div>
 
-            {/* Reading List */}
-            <section className="mb-8">
-              <h2 className="text-xl font-bold text-white mb-4">Required Reading</h2>
-              <div className="space-y-3">
-                <div className="bg-secondary/30 border border-border rounded-lg p-4">
-                  <p className="text-white font-medium">Kaplan, A. and Haenlein, M. (2019) 'Siri, Siri in my hand', Business Horizons, 62(1), pp. 15-25</p>
-                  <p className="text-sm text-slate-400 mt-1">Available via ULaw library</p>
-                </div>
-                <div className="bg-secondary/30 border border-border rounded-lg p-4">
-                  <p className="text-white font-medium">Haenlein, M. and Kaplan, A. (2019) 'A brief history of artificial intelligence', California Management Review, 61(4), pp. 5-14</p>
-                  <p className="text-sm text-slate-400 mt-1">Available via ULaw library</p>
-                </div>
-              </div>
-            </section>
+            {/* Academic Papers */}
+            <div className="grid sm:grid-cols-2 gap-3 mb-6">
+              <IntelFileCard
+                title="Kaplan & Haenlein (2019)"
+                subtitle="Business Horizons 62(1), pp.15-25 — 'Siri, Siri in my hand'"
+                read={paper1Read}
+                onToggle={() => setPaper1Read(!paper1Read)}
+              />
+              <IntelFileCard
+                title="Haenlein & Kaplan (2019)"
+                subtitle="California Management Review 61(4), pp.5-14 — 'A brief history of AI'"
+                read={paper2Read}
+                onToggle={() => setPaper2Read(!paper2Read)}
+              />
+            </div>
 
-            {/* Video Resources */}
-            <section className="mb-8">
-              <h2 className="text-xl font-bold text-white mb-4">Watch Before Your Session</h2>
+            {/* Briefing Videos */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <span>🎬</span> Briefing Videos
+              </h3>
               <div className="grid sm:grid-cols-3 gap-3">
-                {videos.map((video, i) => (
-                  <a key={i} href={video.url} target="_blank" rel="noopener noreferrer" className="bg-secondary/30 border border-border rounded-lg p-4 hover:border-gold transition-colors card-hover">
-                    <p className="text-white font-medium mb-1">{video.title}</p>
-                    <p className="text-sm text-slate-400">{video.duration}</p>
-                    <span className="inline-block mt-2 text-xs text-gold">Watch →</span>
-                  </a>
+                {videos.map((video, idx) => (
+                  <VideoCard
+                    key={idx}
+                    {...video}
+                    watched={videosWatched[idx]}
+                    onToggle={() => {
+                      const newWatched = [...videosWatched];
+                      newWatched[idx] = true;
+                      setVideosWatched(newWatched);
+                    }}
+                  />
                 ))}
               </div>
-            </section>
+            </div>
 
             {/* MCQ Gate */}
-            <section className="mb-8">
-              <h2 className="text-xl font-bold text-white mb-2">Check Your Understanding</h2>
-              <p className="text-slate-400 mb-6">Answer all 5 questions correctly to unlock the simulation. You can retry as many times as needed.</p>
-
-              <div className="space-y-6">
-                {mcqQuestions.map((q, idx) => (
-                  <div key={q.id} className="bg-secondary/30 border border-border rounded-xl p-5">
-                    <p className="text-white font-medium mb-3">{idx + 1}. {q.question}</p>
-                    <div className="space-y-2">
-                      {q.options.map((opt, optIdx) => (
-                        <label key={optIdx} className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                          mcqAnswers[q.id] === optIdx
-                            ? "bg-gold/20 border-gold"
-                            : "bg-background border-border hover:border-gold/50"
-                        )}>
-                          <input
-                            type="radio"
-                            name={q.id}
-                            checked={mcqAnswers[q.id] === optIdx}
-                            onChange={() => !mcqSubmitted && setMcqAnswers(prev => ({ ...prev, [q.id]: optIdx }))}
-                            className="text-gold"
-                            disabled={mcqSubmitted}
-                          />
-                          <span className="text-slate-200">{opt}</span>
-                          {mcqSubmitted && optIdx === q.correct && (
-                            <span className="ml-auto text-green-400 text-sm">✓ Correct</span>
-                          )}
-                          {mcqSubmitted && mcqAnswers[q.id] === optIdx && optIdx !== q.correct && (
-                            <span className="ml-auto text-red-400 text-sm">✗ Incorrect</span>
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* MCQ Results */}
-              {mcqSubmitted && (
-                <div className={cn(
-                  "mt-6 p-4 rounded-xl",
-                  mcqScore === 5 ? "bg-green-900/30 border border-green-500/50" :
-                  mcqScore >= 4 ? "bg-gold/10 border border-gold/30" :
-                  "bg-red-900/30 border border-red-500/50"
-                )}>
-                  <p className="font-medium text-white mb-2">
-                    {mcqScore === 5 && "Excellent preparation. The simulation is now unlocked."}
-                    {mcqScore === 4 && "Almost there. One more try."}
-                    {mcqScore <= 3 && "Some of the material needs another look. Please revisit the reading and videos above before trying again."}
-                  </p>
-                  <p className="text-slate-300">Score: {mcqScore}/5</p>
-                  {mcqScore < 5 && (
-                    <button onClick={resetMcq} className="mt-3 px-4 py-2 bg-gold text-navy rounded-lg font-medium hover:bg-gold-light transition-colors">
-                      Try Again
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {!mcqSubmitted && (
-                <button
-                  onClick={handleMcqSubmit}
-                  disabled={Object.keys(mcqAnswers).length < 5 || prepareLoading}
-                  className="mt-6 px-6 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {prepareLoading ? 'Unlocking...' : 'Submit Answers'}
-                </button>
-              )}
-            </section>
+            <MCQGate onComplete={handleMcqComplete} />
           </div>
         )}
 
         {/* ENGAGE PHASE */}
         {phase === 'engage' && (
           <div className="animate-fade-in">
-            {/* Progress Indicator */}
-            <div className="flex items-center justify-center gap-4 mb-8">
-              <div className="flex items-center gap-2 text-green-400">
-                <span className="w-8 h-8 rounded-full flex items-center justify-center bg-green-500 text-white">✓</span>
-                <span className="text-sm font-medium">Prepare</span>
-              </div>
-              <div className="w-8 h-0.5 bg-green-500" />
-              <div className={cn("flex items-center gap-2", engageStep !== 'final' || finalScore === null ? "text-gold" : "text-slate-500")}>
-                <span className={cn("w-8 h-8 rounded-full flex items-center justify-center", engageStep ? "bg-gold text-navy" : "bg-slate-600 text-slate-400")}>2</span>
-                <span className="text-sm font-medium">Engage</span>
-              </div>
-              <div className="w-8 h-0.5 bg-slate-600" />
-              <div className="flex items-center gap-2 text-slate-500">
-                <span className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-600 text-slate-400">3</span>
-                <span className="text-sm font-medium">Complete</span>
-              </div>
+            {/* HQ Banner */}
+            <div className="bg-navy border border-gold/30 rounded-lg p-3 mb-6 text-center">
+              <span className="text-gold text-sm font-medium">
+                📍 You are now inside Velara HQ — Marketing Department
+              </span>
             </div>
 
-            {/* I Do Section */}
-            {engageStep === 'iDo' && (
-              <div className="animate-fade-in">
-                <h2 className="text-2xl font-bold text-white mb-2">I Do — Watch First</h2>
-                <p className="text-slate-400 mb-6">Watch this short walkthrough before attempting the challenges. It shows exactly how Velara's problem plays out in practice.</p>
+            {/* I DO */}
+            {engageStage === 'iDo' && (
+              <div>
+                <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-2">I Do — Watch Marcus's Approach</h3>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Watch how Senior Consultant Marcus Webb handled the same problem at a previous client.
+                  </p>
+                  
+                  {/* Video Placeholder */}
+                  <div className="bg-navy aspect-video rounded-lg flex flex-col items-center justify-center border border-slate-700 mb-4">
+                    <div className="text-6xl mb-4">🎬</div>
+                    <p className="text-gold font-semibold">Marcus Webb — Prompt Engineering Walkthrough</p>
+                    <p className="text-slate-400 text-sm">Video placeholder — Loom embed ready</p>
+                  </div>
 
-                {/* Video Placeholder */}
-                <div className="bg-navy border-2 border-gold/30 rounded-xl aspect-video flex flex-col items-center justify-center mb-6">
-                  <p className="text-gold text-xl font-bold mb-2">Module 1: Prompt Engineering Walkthrough</p>
-                  <p className="text-slate-400">Loom video will be embedded here</p>
-                  <p className="text-sm text-slate-500 mt-2">— Coming Soon —</p>
+                  {/* Sign-off checkbox */}
+                  <label className={cn(
+                    "flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-all",
+                    iDoWatched ? "bg-green-500/10 border-green-500/50" : "bg-slate-800 border-slate-700 hover:border-gold/50"
+                  )}>
+                    <input
+                      type="checkbox"
+                      checked={iDoWatched}
+                      onChange={(e) => setIDoWatched(e.target.checked)}
+                      className="w-5 h-5 text-gold rounded"
+                    />
+                    <span className={cn("text-sm", iDoWatched ? "text-green-400" : "text-slate-300")}>
+                      ✓ I have reviewed Marcus's approach and am ready to proceed
+                    </span>
+                  </label>
                 </div>
-
-                {/* Checkbox */}
-                <label className="flex items-center gap-3 p-4 bg-secondary/30 border border-border rounded-xl cursor-pointer hover:border-gold transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={iDoWatched}
-                    onChange={(e) => setIDoWatched(e.target.checked)}
-                    className="w-5 h-5 text-gold"
-                  />
-                  <span className="text-white">I have watched the walkthrough video</span>
-                </label>
 
                 {iDoWatched && (
                   <button
-                    onClick={() => setEngageStep('weDo')}
-                    className="mt-6 px-6 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-colors"
+                    onClick={() => setEngageStage('weDo')}
+                    className="w-full py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-all"
                   >
-                    Continue to We Do →
+                    Proceed to We Do →
                   </button>
                 )}
               </div>
             )}
 
-            {/* We Do Section */}
-            {engageStep === 'weDo' && !weDoCompleted && (
-              <div className="animate-fade-in">
-                <h2 className="text-2xl font-bold text-white mb-2">We Do — Guided Practice</h2>
-                <p className="text-slate-400 mb-6">Velara's marketing team wrote these three prompts last week. Work through each one and identify what is wrong.</p>
+            {/* WE DO */}
+            {engageStage === 'weDo' && (
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">We Do — Guided Practice</h3>
+                <p className="text-slate-400 text-sm mb-6">
+                  Tasks are arriving on your desk. Work through each one with Marcus's guidance.
+                </p>
 
-                {/* Card 1 */}
-                {weDoCard === 1 && (
-                  <div className="bg-secondary/30 border border-border rounded-xl p-6">
-                    <p className="text-xs text-gold uppercase tracking-wider mb-2">Velara Team Prompt</p>
-                    <div className="bg-background border border-border rounded-lg p-4 mb-6">
-                      <p className="text-slate-200 font-mono">"Write about our summer dress"</p>
+                {/* Task 1 */}
+                {weDoTask === 1 && (
+                  <TaskCard title="Task 1: Diagnose the Problem" badge="Guided">
+                    <p className="text-slate-300 text-sm mb-4">
+                      Velara's marketing team wrote this prompt last week:
+                    </p>
+                    <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 mb-4 font-mono text-slate-200">
+                      "Write about our summer dress"
                     </div>
-                    <p className="text-white font-medium mb-4">What is missing from this prompt? (Select all that apply)</p>
-
-                    <div className="space-y-2 mb-6">
-                      {['No role assigned to the AI', 'No output format specified', 'No brand context provided', 'No target audience mentioned'].map((opt) => (
-                        <label key={opt} className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                          weDoCard1Answers.includes(opt)
-                            ? "bg-gold/20 border-gold"
-                            : "bg-background border-border hover:border-gold/50"
-                        )}>
-                          <input
-                            type="checkbox"
-                            checked={weDoCard1Answers.includes(opt)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setWeDoCard1Answers([...weDoCard1Answers, opt]);
-                              } else {
-                                setWeDoCard1Answers(weDoCard1Answers.filter(a => a !== opt));
-                              }
-                            }}
-                          />
-                          <span className="text-slate-200">{opt}</span>
-                        </label>
-                      ))}
-                    </div>
+                    <p className="text-white text-sm mb-3">What is missing from this prompt? (Select all that apply)</p>
+                    
+                    {['No role assigned to the AI', 'No output format specified', 'No brand context provided', 'No target audience mentioned'].map((opt) => (
+                      <label
+                        key={opt}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all mb-2",
+                          weDo1Answers.includes(opt) ? "bg-gold/10 border-gold" : "bg-slate-800 border-slate-700 hover:border-gold/50"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={weDo1Answers.includes(opt)}
+                          onChange={() => {
+                            if (weDo1Answers.includes(opt)) {
+                              setWeDo1Answers(weDo1Answers.filter(a => a !== opt));
+                            } else {
+                              setWeDo1Answers([...weDo1Answers, opt]);
+                            }
+                          }}
+                        />
+                        <span className="text-slate-300 text-sm">{opt}</span>
+                      </label>
+                    ))}
 
                     <button
-                      onClick={checkWeDoCard1}
-                      disabled={weDoCard1Answers.length === 0}
-                      className="px-6 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-colors disabled:opacity-50"
+                      onClick={handleWeDo1Submit}
+                      disabled={weDo1Answers.length < 4}
+                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
                     >
-                      Submit
+                      Submit Diagnosis
                     </button>
-                  </div>
+
+                    {weDo1Complete && (
+                      <div className="mt-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
+                        <p className="text-green-400 text-sm">Correct! All four elements are missing from this prompt. The AI has almost nothing to work with.</p>
+                      </div>
+                    )}
+                  </TaskCard>
                 )}
 
-                {/* Card 2 */}
-                {weDoCard === 2 && (
-                  <div className="bg-secondary/30 border border-border rounded-xl p-6">
-                    <p className="text-xs text-gold uppercase tracking-wider mb-2">Velara Team Prompt</p>
-                    <div className="bg-background border border-border rounded-lg p-4 mb-6">
-                      <p className="text-slate-200 font-mono">"Make our Instagram post good"</p>
+                {/* Task 2 */}
+                {weDoTask === 2 && (
+                  <TaskCard title="Task 2: Rewrite the Prompt" badge="Guided">
+                    <p className="text-slate-300 text-sm mb-4">
+                      Velara's marketing team wrote this prompt:
+                    </p>
+                    <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 mb-4 font-mono text-slate-200">
+                      "Make our Instagram post good"
                     </div>
-                    <p className="text-white font-medium mb-4">Rewrite this prompt to make it effective. Include a role, context, format, and goal.</p>
-
+                    <p className="text-white text-sm mb-3">Rewrite this prompt to make it effective. Include a role, context, format, and goal.</p>
+                    
                     <textarea
-                      value={weDoCard2Text}
-                      onChange={(e) => setWeDoCard2Text(e.target.value)}
+                      value={weDo2Text}
+                      onChange={(e) => setWeDo2Text(e.target.value)}
                       placeholder="Write your improved prompt here..."
-                      className="w-full h-32 px-4 py-3 bg-background border border-border rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
                     />
 
-                    {weDoCard2Score !== null && (
-                      <div className="mt-4 p-3 bg-gold/10 border border-gold/30 rounded-lg">
-                        <p className="text-gold font-medium">Score: {weDoCard2Score}/5</p>
-                        <p className="text-sm text-slate-300 mt-1">+25 XP earned (practice round)</p>
+                    {weDo2Score && (
+                      <div>
+                        <ScoreBreakdown criteria={weDo2Score} />
+                        <XPCounter amount={25} />
                       </div>
                     )}
 
                     <button
-                      onClick={checkWeDoCard2}
-                      disabled={weDoCard2Text.length < 10 || weDoCard2Score !== null}
-                      className="mt-4 px-6 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-colors disabled:opacity-50"
+                      onClick={handleWeDo2Submit}
+                      disabled={weDo2Text.length < 10 || weDo2Score !== null}
+                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
                     >
-                      Check My Prompt
+                      Submit Prompt
                     </button>
-                  </div>
+                  </TaskCard>
                 )}
 
-                {/* Card 3 */}
-                {weDoCard === 3 && (
-                  <div className="bg-secondary/30 border border-border rounded-xl p-6">
-                    <p className="text-xs text-gold uppercase tracking-wider mb-2">Velara Team Prompt</p>
-                    <div className="bg-background border border-border rounded-lg p-4 mb-6">
-                      <p className="text-slate-200 font-mono">"Help with email"</p>
-                    </div>
-                    <p className="text-white font-medium mb-4">Sarah Chen needs to respond to a customer complaint about a late delivery. Write a complete prompt that would get a professional, empathetic response.</p>
-
+                {/* Task 3 */}
+                {weDoTask === 3 && (
+                  <TaskCard title="Task 3: Customer Complaint Scenario" badge="Guided">
+                    <p className="text-slate-300 text-sm mb-4">
+                      Sarah Chen needs to respond to a customer complaint about a late delivery. Write a complete prompt that would get a professional, empathetic response.
+                    </p>
+                    
                     <textarea
-                      value={weDoCard3Text}
-                      onChange={(e) => setWeDoCard3Text(e.target.value)}
-                      placeholder="Write your prompt here..."
-                      className="w-full h-32 px-4 py-3 bg-background border border-border rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      value={weDo3Text}
+                      onChange={(e) => setWeDo3Text(e.target.value)}
+                      placeholder="Write your prompt for the customer complaint response..."
+                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
                     />
 
-                    {weDoCard3Score !== null && (
-                      <div className="mt-4 p-3 bg-gold/10 border border-gold/30 rounded-lg">
-                        <p className="text-gold font-medium">Score: {weDoCard3Score}/5</p>
-                        <p className="text-sm text-slate-300 mt-1">+50 XP earned</p>
+                    {weDo3Score && (
+                      <div>
+                        <ScoreBreakdown criteria={weDo3Score} />
+                        <XPCounter amount={50} />
                       </div>
                     )}
 
                     <button
-                      onClick={checkWeDoCard3}
-                      disabled={weDoCard3Text.length < 10 || weDoCard3Score !== null}
-                      className="mt-4 px-6 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-colors disabled:opacity-50"
+                      onClick={handleWeDo3Submit}
+                      disabled={weDo3Text.length < 10 || weDo3Score !== null}
+                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
                     >
-                      Check My Prompt
+                      Submit Prompt
                     </button>
-                  </div>
+                  </TaskCard>
                 )}
               </div>
             )}
 
-            {/* You Do Section */}
-            {engageStep === 'youDo' && (
-              <div className="animate-fade-in">
-                <h2 className="text-2xl font-bold text-white mb-2">You Do — Solo Challenges</h2>
-                <p className="text-slate-400 mb-6">Three challenges of increasing difficulty. No guided help from here.</p>
+            {/* YOU DO */}
+            {engageStage === 'youDo' && (
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">You Do — Solo Challenges</h3>
+                <p className="text-slate-400 text-sm mb-6">
+                  Three challenges of increasing difficulty. Apply what you've learned without guidance.
+                </p>
 
                 {/* Challenge 1 */}
-                {youDoChallenge === 1 && (
-                  <div className="bg-secondary/30 border border-border rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="px-2 py-1 bg-green-600/30 text-green-400 rounded text-xs font-medium">Easy</span>
-                      <span className="text-gold font-medium">100 XP</span>
-                    </div>
-                    <p className="text-white mb-4">Velara is launching a new sustainable evening wear collection called <strong>The Midnight Edit</strong>. Write a prompt that gets an AI to produce a 150-word product description in Velara's brand voice: sophisticated, sustainable, and British.</p>
-
+                {youDoTask === 1 && (
+                  <TaskCard title="Quick Fix (Easy)" badge="100 XP">
+                    <p className="text-slate-300 text-sm mb-4">
+                      Velara is launching a new sustainable evening wear collection called <strong>The Midnight Edit</strong>. 
+                      Write a prompt that gets an AI to produce a 150-word product description in Velara's brand voice: sophisticated, sustainable, and British.
+                    </p>
+                    
                     <textarea
                       value={youDo1Text}
                       onChange={(e) => setYouDo1Text(e.target.value)}
                       placeholder="Write your prompt here..."
-                      className="w-full h-32 px-4 py-3 bg-background border border-border rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
                     />
 
-                    {youDo1Score !== null && (
-                      <div className="mt-4 p-3 bg-gold/10 border border-gold/30 rounded-lg">
-                        <p className="text-gold font-medium">Score: {youDo1Score}/5</p>
-                        <p className="text-sm text-slate-300 mt-1">+{youDo1Score >= 4 ? 100 : youDo1Score >= 2 ? 50 : 0} XP earned</p>
+                    {youDo1Score && (
+                      <div>
+                        <ScoreBreakdown criteria={youDo1Score} />
+                        <XPCounter amount={youDo1Score.filter(c => c.passed).length >= 4 ? 100 : youDo1Score.filter(c => c.passed).length >= 2 ? 50 : 0} />
                       </div>
                     )}
 
                     <button
                       onClick={checkYouDo1}
                       disabled={youDo1Text.length < 10 || youDo1Score !== null}
-                      className="mt-4 px-6 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-colors disabled:opacity-50"
+                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
                     >
-                      Submit Challenge 1
+                      Submit Challenge
                     </button>
-                  </div>
+                  </TaskCard>
                 )}
 
                 {/* Challenge 2 */}
-                {youDoChallenge === 2 && (
-                  <div className="bg-secondary/30 border border-border rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="px-2 py-1 bg-gold/30 text-gold rounded text-xs font-medium">Medium</span>
-                      <span className="text-gold font-medium">150 XP</span>
-                    </div>
-                    <p className="text-white mb-4">Velara's social media team needs to produce 5 Instagram captions every Monday. Write a prompt that generates all 5 in one go. Each caption must be under 150 characters, include one relevant emoji, and end with a branded hashtag.</p>
-
+                {youDoTask === 2 && (
+                  <TaskCard title="Client Presentation (Medium)" badge="150 XP">
+                    <p className="text-slate-300 text-sm mb-4">
+                      Velara's social media team needs to produce 5 Instagram captions every Monday. 
+                      Write a prompt that generates all 5 in one go. Each caption must be under 150 characters, include one relevant emoji, and end with a branded hashtag.
+                    </p>
+                    
                     <textarea
                       value={youDo2Text}
                       onChange={(e) => setYouDo2Text(e.target.value)}
                       placeholder="Write your prompt here..."
-                      className="w-full h-32 px-4 py-3 bg-background border border-border rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
                     />
 
-                    {youDo2Score !== null && (
-                      <div className="mt-4 p-3 bg-gold/10 border border-gold/30 rounded-lg">
-                        <p className="text-gold font-medium">Score: {youDo2Score}/5</p>
-                        <p className="text-sm text-slate-300 mt-1">+{youDo2Score >= 4 ? 150 : youDo2Score >= 2 ? 75 : 0} XP earned</p>
+                    {youDo2Score && (
+                      <div>
+                        <ScoreBreakdown criteria={youDo2Score} />
+                        <XPCounter amount={youDo2Score.filter(c => c.passed).length >= 4 ? 150 : youDo2Score.filter(c => c.passed).length >= 2 ? 75 : 0} />
                       </div>
                     )}
 
                     <button
                       onClick={checkYouDo2}
                       disabled={youDo2Text.length < 10 || youDo2Score !== null}
-                      className="mt-4 px-6 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-colors disabled:opacity-50"
+                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
                     >
-                      Submit Challenge 2
+                      Submit Challenge
                     </button>
-                  </div>
+                  </TaskCard>
                 )}
 
                 {/* Challenge 3 */}
-                {youDoChallenge === 3 && (
-                  <div className="bg-secondary/30 border border-border rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="px-2 py-1 bg-red-600/30 text-red-400 rounded text-xs font-medium">Hard</span>
-                      <span className="text-gold font-medium">200 XP</span>
-                    </div>
-                    <p className="text-white mb-4">Velara receives approximately 30 identical late delivery complaints every week. The customer service team copies and pastes the same response. Write a prompt that generates a response which is empathetic, offers a 10% discount code, maintains Velara's sophisticated brand voice, and does not sound like a template.</p>
-
+                {youDoTask === 3 && (
+                  <TaskCard title="Board-Level Decision (Hard)" badge="200 XP">
+                    <p className="text-slate-300 text-sm mb-4">
+                      Velara receives approximately 30 identical late delivery complaints every week. 
+                      The customer service team copies and pastes the same response. 
+                      Write a prompt that generates a response which is empathetic, offers a 10% discount code, maintains Velara's sophisticated brand voice, and does not sound like a template.
+                    </p>
+                    
                     <textarea
                       value={youDo3Text}
                       onChange={(e) => setYouDo3Text(e.target.value)}
                       placeholder="Write your prompt here..."
-                      className="w-full h-32 px-4 py-3 bg-background border border-border rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
                     />
 
-                    {youDo3Score !== null && (
-                      <div className="mt-4 p-3 bg-gold/10 border border-gold/30 rounded-lg">
-                        <p className="text-gold font-medium">Score: {youDo3Score}/5</p>
-                        <p className="text-sm text-slate-300 mt-1">+{youDo3Score >= 4 ? 200 : youDo3Score >= 2 ? 100 : 0} XP earned</p>
+                    {youDo3Score && (
+                      <div>
+                        <ScoreBreakdown criteria={youDo3Score} />
+                        <XPCounter amount={youDo3Score.filter(c => c.passed).length >= 4 ? 200 : youDo3Score.filter(c => c.passed).length >= 2 ? 100 : 0} />
                       </div>
                     )}
 
                     <button
                       onClick={checkYouDo3}
                       disabled={youDo3Text.length < 10 || youDo3Score !== null}
-                      className="mt-4 px-6 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-colors disabled:opacity-50"
+                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
                     >
-                      Submit Challenge 3
+                      Submit Challenge
                     </button>
-                  </div>
+                  </TaskCard>
                 )}
               </div>
             )}
 
-            {/* Final Challenge */}
-            {engageStep === 'final' && (
-              <div className="animate-fade-in">
-                <h2 className="text-2xl font-bold text-white mb-2">Final Challenge</h2>
-                <p className="text-slate-400 mb-6">No hints. Show what you've learned.</p>
+            {/* FINAL CHALLENGE */}
+            {engageStage === 'final' && (
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">Final Challenge</h3>
+                <p className="text-slate-400 text-sm mb-6">
+                  Sarah Chen has forwarded you this prompt her PA wrote this morning.
+                </p>
 
-                <div className="bg-secondary/30 border border-border rounded-xl p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="px-2 py-1 bg-purple-600/30 text-purple-400 rounded text-xs font-medium">Final</span>
-                    <span className="text-gold font-medium">250 XP</span>
+                <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-6">
+                  <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 mb-6 font-mono text-slate-200 text-center text-lg">
+                    "Write email"
                   </div>
 
-                  <p className="text-white mb-4">Sarah Chen has forwarded you this prompt her PA wrote this morning: <strong>"Write email"</strong></p>
-
-                  <div className="space-y-4 mb-6">
+                  <div className="space-y-6">
                     <div>
-                      <label className="block text-white font-medium mb-2">Part 1: Rewrite this prompt properly so it produces a professional weekly sales update email for Velara's board of directors.</label>
+                      <label className="block text-white font-medium mb-2">
+                        Part 1: Rewrite this prompt properly so it produces a professional weekly sales update email for Velara's board of directors.
+                      </label>
                       <textarea
                         value={finalPrompt}
                         onChange={(e) => setFinalPrompt(e.target.value)}
                         placeholder="Write your rewritten prompt here..."
-                        className="w-full h-32 px-4 py-3 bg-background border border-border rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                        className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-white font-medium mb-2">Part 2: In two to three sentences, explain what was wrong with the original prompt and why your version is better.</label>
+                      <label className="block text-white font-medium mb-2">
+                        Part 2: In 2-3 sentences, explain what was wrong with the original prompt and why your version is better.
+                      </label>
                       <textarea
                         value={finalExplanation}
                         onChange={(e) => setFinalExplanation(e.target.value)}
                         placeholder="Write your explanation here..."
-                        className="w-full h-24 px-4 py-3 bg-background border border-border rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                        className="w-full h-24 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
                       />
                     </div>
                   </div>
 
-                  {finalScore !== null && (
-                    <div className="p-4 bg-gold/10 border border-gold/30 rounded-lg mb-4">
-                      <p className="text-gold font-medium text-lg">Total Score: {finalScore}/8</p>
-                      <p className="text-sm text-slate-300 mt-1">+{finalScore >= 6 ? 250 : finalScore >= 4 ? 150 : 75} XP earned</p>
+                  {finalScore && (
+                    <div className="mt-6">
+                      <ScoreBreakdown criteria={finalScore} />
+                      <XPCounter amount={finalScore.filter(c => c.passed).length >= 6 ? 250 : finalScore.filter(c => c.passed).length >= 4 ? 150 : 75} />
                     </div>
                   )}
 
                   <button
-                    onClick={checkFinalChallenge}
+                    onClick={handleFinalSubmit}
                     disabled={(finalPrompt.length < 20 || finalExplanation.length < 20) && finalScore === null}
-                    className="px-6 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 flex items-center gap-2"
+                    className={cn(
+                      "mt-6 w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2",
+                      "bg-gold text-navy hover:bg-gold-light disabled:opacity-50"
+                    )}
                   >
-                    {isSubmitting && <span className="spinner w-5 h-5" />}
-                    Submit Final Challenge
+                    {isSubmitting ? (
+                      <>
+                        <span className="spinner w-5 h-5" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Final Challenge'
+                    )}
                   </button>
                 </div>
               </div>
@@ -768,52 +1081,79 @@ export default function Module1Page() {
           </div>
         )}
 
-        {/* COMPLETION SCREEN */}
-        {phase === 'complete' && (
+        {/* CONSOLIDATE PHASE */}
+        {phase === 'consolidate' && (
           <div className="animate-fade-in text-center">
-            <div className="bg-secondary/30 border border-gold/50 rounded-2xl p-8 max-w-2xl mx-auto">
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-3xl font-bold text-white mb-4">Module 1 Complete</h2>
-
-              {/* Badge */}
-              <div className="inline-block badge-gold px-6 py-3 rounded-full text-lg font-bold mb-6">
-                🏅 Prompt Specialist
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-background rounded-lg p-4">
-                  <p className="text-slate-400 text-sm">XP Earned This Module</p>
-                  <p className="text-2xl font-bold text-gold">{moduleXP}</p>
+            {/* Badge */}
+            <div className="mb-8">
+              <div className="inline-block relative">
+                <div className="w-32 h-32 bg-gradient-to-br from-gold to-gold-dark rounded-full flex items-center justify-center shadow-lg shadow-gold/30 animate-pulse-gold">
+                  <span className="text-5xl">🏅</span>
                 </div>
-                <div className="bg-background rounded-lg p-4">
-                  <p className="text-slate-400 text-sm">Total XP</p>
-                  <p className="text-2xl font-bold text-white">{progress.totalXP + moduleXP}</p>
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-navy border border-gold px-4 py-1 rounded-full">
+                  <span className="text-gold font-bold text-sm">Prompt Specialist</span>
                 </div>
               </div>
-
-              {/* Academic Reference */}
-              <div className="text-left bg-background/50 rounded-lg p-4 mb-6">
-                <p className="text-sm text-gold font-medium mb-2">Academic Reference</p>
-                <p className="text-sm text-slate-300 mb-2">Kaplan, A. and Haenlein, M. (2019) 'Siri, Siri in my hand: Who's the fairest in the land?', Business Horizons, 62(1), pp. 15-25.</p>
-                <p className="text-sm text-slate-400">This research establishes how AI systems simulate human cognitive functions—the foundation of effective prompt engineering you just practiced.</p>
-              </div>
-
-              {/* Ethics Checkpoint */}
-              <div className="text-left bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-6">
-                <p className="text-sm text-red-400 font-medium mb-2">Ethics Checkpoint</p>
-                <p className="text-sm text-slate-300">Before Velara deploys AI-generated content publicly — what disclosure obligations apply? Consider the ASA guidelines on AI-generated advertising and ULaw AI Policy (2023).</p>
-              </div>
-
-              <button
-                onClick={() => router.push('/course2')}
-                className="px-8 py-4 bg-gold text-navy rounded-lg font-semibold text-lg hover:bg-gold-light transition-colors"
-              >
-                Next Module →
-              </button>
             </div>
+
+            <h2 className="text-3xl font-bold text-white mb-2">Module Complete!</h2>
+            <p className="text-slate-400 mb-8">You have successfully completed the Prompt Engineering module.</p>
+
+            {/* XP Stats */}
+            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-8">
+              <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-1">XP This Module</p>
+                <p className="text-2xl font-bold text-gold">{moduleXP}</p>
+              </div>
+              <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-1">Total XP</p>
+                <p className="text-2xl font-bold text-white">{progress.totalXP}</p>
+              </div>
+            </div>
+
+            {/* Academic Insight */}
+            <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-6 mb-6 text-left max-w-2xl mx-auto">
+              <h3 className="text-gold font-semibold mb-3 flex items-center gap-2">
+                <span>📚</span> Academic Insight
+              </h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Kaplan and Haenlein (2019) define AI as systems that simulate human cognitive functions such as learning and problem-solving. 
+                Your work in this module demonstrates how to effectively direct these cognitive functions through structured prompts. 
+                The five elements of effective prompting — role, context, format, goal, and detail — align with their framework for human-AI collaboration.
+              </p>
+            </div>
+
+            {/* Ethics Checkpoint */}
+            <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-6 mb-8 text-left max-w-2xl mx-auto">
+              <h3 className="text-red-400 font-semibold mb-3 flex items-center gap-2">
+                <span>⚖️</span> Ethics Checkpoint
+              </h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Before Velara deploys AI-generated content publicly — what are their disclosure obligations? 
+                Consider the ASA (Advertising Standards Authority) guidelines on AI-generated advertising and ULaw's AI Policy (2023). 
+                How might transparency requirements affect their marketing strategy?
+              </p>
+            </div>
+
+            {/* Navigation */}
+            <button
+              onClick={() => router.push('/course2')}
+              className="px-8 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-all"
+            >
+              Return to Mission Board →
+            </button>
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="py-6 px-4 mt-12 border-t border-slate-800">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-sm text-slate-500">
+            © 2025 SwipeUp AI Society • University of Law
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
