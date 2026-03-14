@@ -314,13 +314,13 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Code Input for Course 2 */}
-                  {course.id === 2 && !progress.course2Unlocked && !progress.course1Completed && (
+                  {course.id === 2 && !progress.course2Unlocked && (
                     <div className="mb-3">
                       <button
                         onClick={() => setShowCodeInput(!showCodeInput)}
                         className="text-xs text-gold hover:underline"
                       >
-                        Have a completion code?
+                        Have a completion code from Course 1?
                       </button>
                       {showCodeInput && (
                         <div className="mt-2 space-y-2">
