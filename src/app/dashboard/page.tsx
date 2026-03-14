@@ -98,10 +98,10 @@ export default function DashboardPage() {
 
   const handleCodeSubmit = () => {
     setCodeError('');
-    const code = codeInput.trim().toUpperCase();
+    const code = codeInput.toUpperCase().replace(/\s+/g, ' ')trim();
 
     if (!validateCodeFormat(code)) {
-      setCodeError('Invalid code format. Code should look like: SWIPEUP-JOHN-120-A1B2');
+      setCodeError('Invalid code format. Code should look like: SWIPEUP-JOHN-120-2026 or SWIPEUP-RAJ -895-006Z');
       return;
     }
 
