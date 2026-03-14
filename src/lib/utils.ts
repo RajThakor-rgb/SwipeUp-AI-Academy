@@ -1,36 +1,40 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { AcademyProgress } from '@/types/academy';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function validateStudentId(studentId: string): boolean {
-  const pattern = /^0[0-9]{6}$/;
-  return pattern.test(studentId);
-}
-
-export function generateCompletionCode(name: string, xp: number): string {
-  const namePart = name.slice(0, 4).toUpperCase().padEnd(4, 'X');
-  const xpPart = Math.floor(xp / 10);
-  const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `SWIPEUP-${namePart}-${xpPart}-${randomPart}`;
-}
-
-export function calculateOverallProgress(progress: {
-  course1Completed: boolean;
-  course2CertificateEarned: boolean;
-  course3Completed: boolean;
-  course4Completed: boolean;
-  course5Completed: boolean;
-}): number {
-  let completed = 0;
-  if (progress.course1Completed) completed++;
-  if (progress.course2CertificateEarned) completed++;
-  if (progress.course3Completed) completed++;
-  if (progress.course4Completed) completed++;
-  if (progress.course5Completed) completed++;
-  return Math.round((completed / 5) * 100);
+export function calculateOverallProgress(progress: AcademyProgress): number {
+  let totalProgress = 0;
+  
+  // Course 1: 20% of total (binary - completed or not)
+  if (progress.course1Completed) {
+    totalProgress += 20;
+  }
+  
+  // Course 2: 20% of total (fractional based on modules completed)
+  // 5 modules total, each module = 4%
+  const course2ModulesProgress = (progress.course2ModulesCompleted.length / 5) * 20;
+  totalProgress += course2ModulesProgress;
+  
+  // Course 3: 20% of total (binary for now)
+  if (progress.course3Completed) {
+    totalProgress += 20;
+  }
+  
+  // Course 4: 20% of total (binary for now)
+  if (progress.course4Completed) {
+    totalProgress += 20;
+  }
+  
+  // Course 5: 20% of total (binary for now)
+  if (progress.course5Completed) {
+    totalProgress += 20;
+  }
+  
+  return Math.round(totalProgress);
 }
 
 export function formatDate(isoDate: string): string {
