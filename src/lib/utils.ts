@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function validateStudentId(studentId: string): boolean {
-  const pattern = /^0[0-9]{7}$/;
+  const pattern = /^0[0-9]{6}$/;
   return pattern.test(studentId);
 }
 
