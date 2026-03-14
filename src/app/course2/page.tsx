@@ -14,6 +14,7 @@ const modules = [
     department: 'Marketing',
     departmentIcon: '📢',
     problem: "Marketing's AI outputs are generic and off-brand",
+    problemDescription: "The marketing team has been using AI tools for three months, but their outputs lack brand voice consistency. Product descriptions mention competitors, social media posts feel robotic, and the team doesn't know how to write effective prompts for their specific needs.",
     xpAvailable: 700,
     estimatedTime: '45 min',
     difficulty: 'Foundation',
@@ -25,6 +26,7 @@ const modules = [
     department: 'Customer Service',
     departmentIcon: '🎧',
     problem: '200+ unread emails every Monday morning',
+    problemDescription: "The customer service team is overwhelmed with repetitive enquiries about delivery status, returns, and product availability. They spend hours copying and pasting similar responses instead of building customer relationships. Response times average 48 hours.",
     xpAvailable: 850,
     estimatedTime: '60 min',
     difficulty: 'Intermediate',
@@ -36,6 +38,7 @@ const modules = [
     department: 'Operations',
     departmentIcon: '⚙️',
     problem: 'Manual processes costing 12 hours per week',
+    problemDescription: "Operations relies on manual spreadsheet updates for inventory tracking, order processing, and supplier coordination. The team manually cross-references three different systems, leading to errors, delays, and frustrated staff who spend 12 hours weekly on tasks that could be automated.",
     xpAvailable: 900,
     estimatedTime: '75 min',
     difficulty: 'Intermediate',
@@ -47,6 +50,7 @@ const modules = [
     department: 'Finance',
     departmentIcon: '📊',
     problem: 'Customer data sitting unused in spreadsheets',
+    problemDescription: "Finance has access to valuable customer purchasing data, loyalty programme metrics, and sales trends across 4 years of operations. However, this data remains locked in static spreadsheets with no analysis pipeline, meaning strategic decisions are made on intuition rather than evidence.",
     xpAvailable: 800,
     estimatedTime: '60 min',
     difficulty: 'Advanced',
@@ -58,6 +62,7 @@ const modules = [
     department: 'HR & Culture',
     departmentIcon: '👥',
     problem: 'Knowledge silos between departments',
+    problemDescription: "Critical knowledge is trapped in individual departments. When staff leave, expertise walks out the door. Onboarding takes 8 weeks because there's no central knowledge base, and departments duplicate work because they don't know what others have already created.",
     xpAvailable: 750,
     estimatedTime: '50 min',
     difficulty: 'Advanced',
@@ -69,6 +74,7 @@ const modules = [
 interface MindMapNode {
   id: string;
   label: string;
+  shortLabel?: string;
   x: number;
   y: number;
   isCenter?: boolean;
@@ -81,11 +87,11 @@ interface MindMapNode {
 function MindMap({ onNodeClick, highlightedModule }: { onNodeClick: (id: number) => void; highlightedModule: number | null }) {
   const nodes: MindMapNode[] = [
     { id: 'velara', label: 'Velara', x: 300, y: 200, isCenter: true },
-    { id: 'marketing', label: 'Marketing', x: 120, y: 80, isDepartment: true, moduleId: 1 },
-    { id: 'cs', label: 'Customer Service', x: 480, y: 80, isDepartment: true, moduleId: 2 },
-    { id: 'ops', label: 'Operations', x: 80, y: 200, isDepartment: true, moduleId: 3 },
-    { id: 'finance', label: 'Finance', x: 120, y: 320, isDepartment: true, moduleId: 4 },
-    { id: 'hr', label: 'HR & Culture', x: 480, y: 320, isDepartment: true, moduleId: 5 },
+    { id: 'marketing', label: 'Marketing', x: 120, y: 70, isDepartment: true, moduleId: 1 },
+    { id: 'cs', label: 'Customer Service', shortLabel: 'Customer\nService', x: 480, y: 70, isDepartment: true, moduleId: 2 },
+    { id: 'ops', label: 'Operations', x: 70, y: 200, isDepartment: true, moduleId: 3 },
+    { id: 'finance', label: 'Finance', x: 120, y: 330, isDepartment: true, moduleId: 4 },
+    { id: 'hr', label: 'HR & Culture', shortLabel: 'HR &\nCulture', x: 480, y: 330, isDepartment: true, moduleId: 5 },
   ];
 
   const connections = [
@@ -99,6 +105,49 @@ function MindMap({ onNodeClick, highlightedModule }: { onNodeClick: (id: number)
   const getNodePosition = (id: string) => {
     const node = nodes.find(n => n.id === id);
     return node ? { x: node.x, y: node.y } : { x: 0, y: 0 };
+  };
+
+  // Render label with line breaks if needed
+  const renderLabel = (node: MindMapNode, isHighlighted: boolean) => {
+    const displayLabel = node.shortLabel || node.label;
+    const lines = displayLabel.split('\n');
+    
+    if (lines.length === 1) {
+      return (
+        <text
+          x={node.x}
+          y={node.y}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill={node.isCenter || isHighlighted ? '#1B3A6B' : '#E8A020'}
+          fontSize={node.isCenter ? 14 : 10}
+          fontWeight="600"
+          className="pointer-events-none select-none"
+        >
+          {node.label}
+        </text>
+      );
+    }
+
+    // Multi-line label
+    const lineHeight = 12;
+    const startY = node.y - ((lines.length - 1) * lineHeight) / 2;
+    
+    return lines.map((line, idx) => (
+      <text
+        key={`${node.id}-line-${idx}`}
+        x={node.x}
+        y={startY + idx * lineHeight}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={node.isCenter || isHighlighted ? '#1B3A6B' : '#E8A020'}
+        fontSize={node.isCenter ? 14 : 10}
+        fontWeight="600"
+        className="pointer-events-none select-none"
+      >
+        {line}
+      </text>
+    ));
   };
 
   return (
@@ -139,6 +188,7 @@ function MindMap({ onNodeClick, highlightedModule }: { onNodeClick: (id: number)
       {/* Nodes */}
       {nodes.map((node) => {
         const isHighlighted = node.moduleId === highlightedModule;
+        const hasMultiline = node.shortLabel && node.shortLabel.includes('\n');
         return (
           <g
             key={node.id}
@@ -146,11 +196,11 @@ function MindMap({ onNodeClick, highlightedModule }: { onNodeClick: (id: number)
             className={node.moduleId ? 'cursor-pointer' : ''}
             style={{ transition: 'all 0.3s ease' }}
           >
-            {/* Node Circle */}
+            {/* Node Circle - larger for multiline labels */}
             <circle
               cx={node.x}
               cy={node.y}
-              r={node.isCenter ? 45 : 35}
+              r={node.isCenter ? 45 : hasMultiline ? 40 : 35}
               fill={node.isCenter ? '#E8A020' : isHighlighted ? '#E8A020' : '#1B3A6B'}
               stroke={isHighlighted ? '#E8A020' : '#E8A020'}
               strokeWidth="2"
@@ -161,18 +211,7 @@ function MindMap({ onNodeClick, highlightedModule }: { onNodeClick: (id: number)
               )}
             />
             {/* Node Label */}
-            <text
-              x={node.x}
-              y={node.y}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill={node.isCenter || isHighlighted ? '#1B3A6B' : '#E8A020'}
-              fontSize={node.isCenter ? 14 : 11}
-              fontWeight="600"
-              className="pointer-events-none select-none"
-            >
-              {node.label}
-            </text>
+            {renderLabel(node, isHighlighted)}
           </g>
         );
       })}
@@ -181,20 +220,20 @@ function MindMap({ onNodeClick, highlightedModule }: { onNodeClick: (id: number)
       {nodes.filter(n => n.isDepartment).map((node) => (
         <g key={`problem-${node.id}`}>
           <circle
-            cx={node.x + 30}
-            cy={node.y - 25}
-            r="8"
+            cx={node.x + (node.shortLabel ? 38 : 32)}
+            cy={node.y - (node.shortLabel ? 32 : 28)}
+            r="10"
             fill="#ef4444"
             stroke="#fff"
-            strokeWidth="1"
+            strokeWidth="2"
           />
           <text
-            x={node.x + 30}
-            y={node.y - 25}
+            x={node.x + (node.shortLabel ? 38 : 32)}
+            y={node.y - (node.shortLabel ? 32 : 28)}
             textAnchor="middle"
             dominantBaseline="middle"
             fill="#fff"
-            fontSize="10"
+            fontSize="12"
             fontWeight="bold"
           >
             !
@@ -234,12 +273,18 @@ function CaseStudyDocument({ highlightedModule }: { highlightedModule: number | 
     if (!highlightedModule) return null;
     const mod = modules.find(m => m.id === highlightedModule);
     return mod ? (
-      <div className="bg-gold/20 border border-gold rounded-lg p-3 mb-4">
-        <p className="text-gold text-sm font-medium">
-          Module {mod.id}: {mod.title}
+      <div className="bg-gold/20 border border-gold rounded-lg p-4 mb-4 animate-fade-in">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xl">{mod.departmentIcon}</span>
+          <p className="text-gold font-semibold">
+            Module {mod.id}: {mod.title}
+          </p>
+        </div>
+        <p className="text-white text-sm font-medium mb-1">
+          {mod.department} Department
         </p>
-        <p className="text-slate-300 text-xs mt-1">
-          Department: {mod.department} — {mod.problem}
+        <p className="text-slate-300 text-sm leading-relaxed">
+          {mod.problemDescription}
         </p>
       </div>
     ) : null;
