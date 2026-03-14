@@ -1,0 +1,182 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-navy: #1B3A6B;
+  --color-gold: #E8A020;
+  --color-navy-light: #2A4F8B;
+  --color-navy-dark: #0F2442;
+  --color-gold-light: #F5C04A;
+  --color-gold-dark: #C4871A;
+}
+
+:root {
+  --background: #0F2442;
+  --foreground: #F8FAFC;
+  --primary: #1B3A6B;
+  --primary-foreground: #E8A020;
+  --secondary: #2A4F8B;
+  --secondary-foreground: #F8FAFC;
+  --muted: #1E3A5F;
+  --muted-foreground: #94A3B8;
+  --accent: #E8A020;
+  --accent-foreground: #1B3A6B;
+  --border: #2A4F8B;
+  --ring: #E8A020;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 160, 32, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(232, 160, 32, 0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slide-in-right 0.4s ease-out forwards;
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 2s infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(232, 160, 32, 0.2), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Gradient backgrounds */
+.bg-navy-gradient {
+  background: linear-gradient(135deg, #1B3A6B 0%, #0F2442 50%, #1B3A6B 100%);
+}
+
+.bg-gold-gradient {
+  background: linear-gradient(135deg, #E8A020 0%, #C4871A 100%);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(232, 160, 32, 0.2);
+}
+
+/* Progress bar styles */
+.progress-gold {
+  background: linear-gradient(90deg, #E8A020, #F5C04A, #E8A020);
+  background-size: 200% 100%;
+}
+
+/* Badge styles */
+.badge-gold {
+  background: linear-gradient(135deg, #E8A020, #F5C04A);
+  color: #1B3A6B;
+  font-weight: 600;
+}
+
+/* Button styles */
+.btn-navy {
+  background: #1B3A6B;
+  color: #E8A020;
+  transition: all 0.2s ease;
+}
+
+.btn-navy:hover {
+  background: #2A4F8B;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(27, 58, 107, 0.4);
+}
+
+.btn-gold {
+  background: #E8A020;
+  color: #1B3A6B;
+  transition: all 0.2s ease;
+}
+
+.btn-gold:hover {
+  background: #F5C04A;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(232, 160, 32, 0.4);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0F2442;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2A4F8B;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1B3A6B;
+}
+
+/* Focus states */
+input:focus, textarea:focus, button:focus {
+  outline: 2px solid #E8A020;
+  outline-offset: 2px;
+}
+
+/* Loading spinner */
+.spinner {
+  border: 3px solid rgba(232, 160, 32, 0.2);
+  border-top-color: #E8A020;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
