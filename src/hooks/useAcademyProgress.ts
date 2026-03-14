@@ -113,7 +113,7 @@ export function useAcademyProgress() {
 
   // Validate completion code format
   const validateCodeFormat = useCallback((code: string): boolean => {
-    const pattern = /^SWIPEUP-[A-Z]{4}-\d+-[A-Z0-9]{4}$/;
+    const pattern = /^SWIPEUP-[A-Z]{4}-\d+-.+$/;
     return pattern.test(code.toUpperCase());
   }, []);
 
