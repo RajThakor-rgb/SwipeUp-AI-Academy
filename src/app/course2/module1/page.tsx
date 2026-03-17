@@ -747,14 +747,14 @@ export default function Module1Page() {
                   {/* Video Placeholder */}
                   <div className="bg-navy aspect-video rounded-lg overflow-hidden border border-slate-700 mb-4">
                     <iframe
-                      src="https://ulaw365-my.sharepoint.com/personal/abhirajsinh_thakor83_law_ac_uk/_layouts/15/embed.aspx?UniqueId=60171eaf-d6de-4c3a-85f0-a4a7f7466966&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create"
+                      src="https://ulaw365-my.sharepoint.com/personal/abhirajsinh_thakor83_law_ac_uk/_layouts/15/embed.aspx?UniqueId=86ef4dee-b7c2-440f-849f-ef587752b1f5&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create"
                       width="100%"
                       height="100%"
                       frameBorder="0"
                       scrolling="no"
                       allowFullScreen
                       title="Prompt Engineering - Marcus Webb Walkthrough"
-                      style={{ minHeight: '360px' }}
+                      style={{ minHeight: '720px' }}
                     />
                   </div>
 
