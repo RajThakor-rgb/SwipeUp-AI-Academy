@@ -100,11 +100,16 @@ export function useAcademyProgress() {
   }, [progress, saveProgress]);
 
   // Unlock Course 2 with code
+  // Also marks Course 1 as completed and awards badge
   const unlockCourse2 = useCallback((code: string) => {
     const newProgress = {
       ...progress,
       course2Unlocked: true,
+      course1Completed: true, // Mark Course 1 as completed
       course1CompletionCode: code,
+      badges: progress.badges.includes('AI Explorer') 
+        ? progress.badges 
+        : [...progress.badges, 'AI Explorer'], // Award badge for Course 1
       lastActive: new Date().toISOString(),
     };
     saveProgress(newProgress);
@@ -112,8 +117,12 @@ export function useAcademyProgress() {
   }, [progress, saveProgress]);
 
   // Validate completion code format
+  // Format: SWIPEUP-XXXX-XXX-XXXX (name part + numbers + random part)
+  // Name part may contain spaces if name is shorter than 4 chars
   const validateCodeFormat = useCallback((code: string): boolean => {
+    // Remove any extra spaces and normalize
     const normalizedCode = code.toUpperCase().replace(/\s+/g, ' ').trim();
+    // Pattern: SWIPEUP-[4 chars including possible space]-[numbers]-[alphanumeric]
     const pattern = /^SWIPEUP-[A-Z ]{4}-\d+-.+$/;
     return pattern.test(normalizedCode);
   }, []);
