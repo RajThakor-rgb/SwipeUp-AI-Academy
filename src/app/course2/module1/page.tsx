@@ -18,14 +18,21 @@ interface MCQQuestion {
   correct: number;
 }
 
+// Extended SavedAnswers interface to include scores and feedback
 interface SavedAnswers {
   wd2Txt: string;
+  wd2Score: { n: string; p: boolean }[];
   wd3Txt: string;
+  wd3Score: { n: string; p: boolean }[];
   yd1Txt: string;
+  yd1Score: { n: string; p: boolean }[];
   yd2Txt: string;
+  yd2Score: { n: string; p: boolean }[];
   yd3Txt: string;
+  yd3Score: { n: string; p: boolean }[];
   fp: string;
   fe: string;
+  fScore: { n: string; p: boolean }[];
   moduleXP: number;
 }
 
@@ -98,55 +105,76 @@ const videos = [
 // We Do Task 1 Options
 const WD_OPTS = ['No role assigned to the AI', 'No output format specified', 'No brand context provided', 'No target audience mentioned'];
 
-// Frameworks Data
+// Frameworks Data with enhanced educational content
 const FRAMEWORKS = {
   craft: {
     name: 'CRAFT',
     color: '#7C6FD4',
     desc: 'CRAFT is a practical framework for business prompting. It ensures every prompt tells the AI who it is, what to produce, how to produce it, and in what style — reducing vague outputs dramatically.',
+    whyItWorks: 'By systematically covering Context, Role, Action, Format, and Tone, CRAFT eliminates ambiguity. AI models perform significantly better when they understand the complete picture of what you need.',
+    bestFor: 'Content creation, marketing copy, emails, and any task where the output style matters as much as the content.',
     letters: [
-      { k: 'C', l: 'Context', h: 'Background information the AI needs to understand the situation' },
-      { k: 'R', l: 'Role', h: 'Who the AI should act as — e.g. "Act as a senior marketing copywriter"' },
-      { k: 'A', l: 'Action', h: 'The specific task — write, rewrite, summarise, generate, analyse' },
-      { k: 'F', l: 'Format', h: 'The shape of the output — bullet list, paragraph, email, 150 words' },
-      { k: 'T', l: 'Tone', h: 'The voice and style — professional, warm, sophisticated, concise' },
+      { k: 'C', l: 'Context', h: 'Background information the AI needs to understand the situation', tip: 'Include brand details, audience info, and relevant constraints' },
+      { k: 'R', l: 'Role', h: 'Who the AI should act as — e.g. "Act as a senior marketing copywriter"', tip: 'Be specific: "senior marketing copywriter" > "copywriter"' },
+      { k: 'A', l: 'Action', h: 'The specific task — write, rewrite, summarise, generate, analyse', tip: 'Use strong verbs: write, create, develop, compose' },
+      { k: 'F', l: 'Format', h: 'The shape of the output — bullet list, paragraph, email, 150 words', tip: 'Specify length, structure, and any formatting requirements' },
+      { k: 'T', l: 'Tone', h: 'The voice and style — professional, warm, sophisticated, concise', tip: 'Match tone to your audience and brand voice' },
     ],
     example: {
       label: 'CRAFT applied to Velara Instagram',
-      text: 'Context: Velara is a British sustainable luxury fashion brand. Role: Act as a social media copywriter. Action: Write an Instagram caption for our new summer dress. Format: Under 150 characters with one emoji. Tone: Sophisticated, warm, and aspirational.',
+      text: 'Context: Velara is a British sustainable luxury fashion brand targeting professionals aged 25-45 who value ethical production. Role: Act as a social media copywriter. Action: Write an Instagram caption for our new summer dress. Format: Under 150 characters with one emoji. Tone: Sophisticated, warm, and aspirational.',
+    },
+    beforeAfter: {
+      before: 'Write an Instagram caption for our new dress.',
+      after: 'Context: Velara is a British sustainable luxury fashion brand. Role: Act as a social media copywriter. Action: Write an Instagram caption for our new summer dress. Format: Under 150 characters with one emoji. Tone: Sophisticated, warm, and aspirational.',
+      improvement: 'The CRAFT prompt provides context about the brand, assigns a specific role, and defines the format and tone — resulting in output that matches brand guidelines without revision.'
     },
   },
   costar: {
     name: 'CO-STAR',
     color: '#2B9EAA',
     desc: 'CO-STAR gives you granular control over how the AI responds. It separates the objective (what to achieve) from the audience (who it\'s for) and the response format — useful for multi-stakeholder communications.',
+    whyItWorks: 'CO-STAR explicitly separates the outcome you want (Objective) from who will receive it (Audience). This helps AI tailor both content and complexity level appropriately.',
+    bestFor: 'Strategic communications, stakeholder updates, sales materials, and any content where the target audience varies.',
     letters: [
-      { k: 'C', l: 'Context', h: 'The setting or background — brand, situation, prior events' },
-      { k: 'O', l: 'Objective', h: 'What you want to achieve — sell, inform, apologise, persuade' },
-      { k: 'S', l: 'Style', h: 'The writing style — journalistic, narrative, business formal' },
-      { k: 'T', l: 'Tone', h: 'Emotional register — empathetic, authoritative, friendly' },
-      { k: 'A', l: 'Audience', h: 'Who will read this — customers, board, press, Gen Z' },
-      { k: 'R', l: 'Response', h: 'The exact format of the output — length, structure, sections' },
+      { k: 'C', l: 'Context', h: 'The setting or background — brand, situation, prior events', tip: 'Set the scene: what led to this need?' },
+      { k: 'O', l: 'Objective', h: 'What you want to achieve — sell, inform, apologise, persuade', tip: 'Be clear about the desired outcome' },
+      { k: 'S', l: 'Style', h: 'The writing style — journalistic, narrative, business formal', tip: 'Match style to the communication channel' },
+      { k: 'T', l: 'Tone', h: 'Emotional register — empathetic, authoritative, friendly', tip: 'Tone shapes how the message feels' },
+      { k: 'A', l: 'Audience', h: 'Who will read this — customers, board, press, Gen Z', tip: 'Audience determines vocabulary and complexity' },
+      { k: 'R', l: 'Response', h: 'The exact format of the output — length, structure, sections', tip: 'Specify structure for consistent outputs' },
     ],
     example: {
       label: 'CO-STAR for the board email task',
       text: 'Context: Velara is a fashion brand preparing its weekly update. Objective: Inform board members of sales performance. Style: Executive business writing. Tone: Confident and direct. Audience: Board of directors. Response: Structured email with subject line, 3 bullet summary, and one recommendation.',
+    },
+    beforeAfter: {
+      before: 'Write an email about our sales performance.',
+      after: 'Context: Velara is a fashion brand preparing its weekly update. Objective: Inform board members of sales performance. Style: Executive business writing. Tone: Confident and direct. Audience: Board of directors. Response: Structured email with subject line, 3 bullet summary, and one recommendation.',
+      improvement: 'CO-STAR transforms a vague request into a precise brief. The AI knows exactly who it\'s writing for (board), what style to use (executive), and what structure to follow.'
     },
   },
   risen: {
     name: 'RISEN',
     color: '#C9624C',
     desc: 'RISEN is best for complex tasks that need step-by-step logic. The "Steps" and "Narrowing" elements guide the AI through a process and constrain it to avoid common failure modes like being too generic.',
+    whyItWorks: 'The Steps element breaks complex tasks into manageable pieces, while Narrowing prevents common AI pitfalls like being too verbose, too generic, or including unwanted elements.',
+    bestFor: 'Multi-step processes, customer service responses, complex analyses, and tasks requiring specific constraints.',
     letters: [
-      { k: 'R', l: 'Role', h: 'The persona the AI should take on for this specific task' },
-      { k: 'I', l: 'Instructions', h: 'A clear, direct instruction — what to do in one sentence' },
-      { k: 'S', l: 'Steps', h: 'A sequence the AI should follow — first do X, then do Y' },
-      { k: 'E', l: 'End goal', h: 'What a successful output looks like — the measurable outcome' },
-      { k: 'N', l: 'Narrowing', h: 'Constraints — what to avoid, what not to include, word limits' },
+      { k: 'R', l: 'Role', h: 'The persona the AI should take on for this specific task', tip: 'Choose a role with relevant expertise' },
+      { k: 'I', l: 'Instructions', h: 'A clear, direct instruction — what to do in one sentence', tip: 'Keep it simple and actionable' },
+      { k: 'S', l: 'Steps', h: 'A sequence the AI should follow — first do X, then do Y', tip: 'Number your steps for clarity' },
+      { k: 'E', l: 'End goal', h: 'What a successful output looks like — the measurable outcome', tip: 'Define success criteria' },
+      { k: 'N', l: 'Narrowing', h: 'Constraints — what to avoid, what not to include, word limits', tip: 'List what NOT to do as well as what to do' },
     ],
     example: {
       label: 'RISEN for the complaint response task',
       text: 'Role: You are a customer service specialist for Velara. Instruction: Write a reply to a late delivery complaint. Steps: 1) Open with empathy. 2) Acknowledge the delay. 3) Offer a 10% discount. 4) Close warmly. End goal: A response that retains the customer. Narrowing: Do not sound like a template. Under 150 words.',
+    },
+    beforeAfter: {
+      before: 'Write a reply to a customer complaint.',
+      after: 'Role: You are a customer service specialist for Velara. Instruction: Write a reply to a late delivery complaint. Steps: 1) Open with empathy. 2) Acknowledge the delay. 3) Offer a 10% discount. 4) Close warmly. End goal: A response that retains the customer. Narrowing: Do not sound like a template. Under 150 words.',
+      improvement: 'RISEN ensures the response follows a proven structure, includes specific elements (empathy, apology, compensation), and avoids the "robotic template" feel that frustrates customers.'
     },
   },
 };
@@ -202,6 +230,15 @@ const FW_APPLY: Record<string, Record<FrameworkType, string[]>> = {
     ],
   },
 };
+
+// Pro Tips for prompt engineering
+const PRO_TIPS = [
+  { title: 'Be Specific with Roles', tip: 'Instead of "act as a writer", try "act as a senior B2B marketing copywriter with 10 years of experience in the fashion industry."' },
+  { title: 'Define Success Criteria', tip: 'Tell the AI what "good" looks like: "A successful response will make the customer feel valued and include a concrete next step."' },
+  { title: 'Use Constraints Wisely', tip: 'Constraints improve quality. "Under 100 words" forces focus. "No jargon" ensures accessibility. "Include 3 specific examples" adds substance.' },
+  { title: 'Iterate with Follow-ups', tip: 'If the output isn\'t quite right, follow up with specific feedback: "Make it shorter" or "Add more emotional appeal" or "Try a more casual tone."' },
+  { title: 'Test and Refine', tip: 'Save prompts that work well. Build a personal library of effective prompts you can adapt for different situations.' },
+];
 
 // Word count helper
 function wordCount(s: string): number {
@@ -452,19 +489,21 @@ function MCQGate({ answers, submitted, score, onAnswer, onSubmit, onRetry, isRev
   );
 }
 
-// Framework Reference Card Component
+// Framework Reference Card Component - Enhanced with educational content
 function FrameworkCard({ 
   activeFW, 
   setActiveFW, 
   isOpen, 
   setIsOpen,
-  taskKey 
+  taskKey,
+  showBeforeAfter = true
 }: { 
   activeFW: FrameworkType; 
   setActiveFW: (fw: FrameworkType) => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   taskKey: string;
+  showBeforeAfter?: boolean;
 }) {
   const fw = FRAMEWORKS[activeFW];
   const applyHints = FW_APPLY[taskKey]?.[activeFW];
@@ -526,7 +565,19 @@ function FrameworkCard({
             {fw.desc}
           </div>
 
-          {/* Letters Grid */}
+          {/* Why It Works - New Section */}
+          <div className="p-3 bg-[rgba(45,211,111,0.04)] border border-[rgba(45,211,111,0.15)] rounded mb-3">
+            <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-2">💡 Why It Works</p>
+            <p className="text-[12px] text-[#9DBBD4] leading-relaxed">{fw.whyItWorks}</p>
+          </div>
+
+          {/* Best For - New Section */}
+          <div className="p-3 bg-[rgba(201,168,76,0.04)] border border-[rgba(201,168,76,0.15)] rounded mb-3">
+            <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">🎯 Best For</p>
+            <p className="text-[12px] text-[#9DBBD4] leading-relaxed">{fw.bestFor}</p>
+          </div>
+
+          {/* Letters Grid with Tips */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
             {fw.letters.map((l) => (
               <div
@@ -540,6 +591,7 @@ function FrameworkCard({
                 <p className="font-mono text-[13px] font-bold" style={{ color: fw.color }}>{l.k}</p>
                 <p className="text-[12px] font-semibold text-white mt-0.5">{l.l}</p>
                 <p className="text-[11px] text-[#3D5870] leading-tight mt-0.5">{l.h}</p>
+                <p className="text-[10px] text-[#7A9AB5] leading-tight mt-1 italic">💡 {l.tip}</p>
               </div>
             ))}
           </div>
@@ -549,6 +601,26 @@ function FrameworkCard({
             <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">{fw.example.label}</p>
             <p className="text-[12px] text-[#9DBBD4] leading-relaxed">{fw.example.text}</p>
           </div>
+
+          {/* Before/After Comparison - New Section */}
+          {showBeforeAfter && fw.beforeAfter && (
+            <div className="mt-3 p-3 bg-[#08131E] border border-[#1C3348] rounded">
+              <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">📊 Before vs After</p>
+              <div className="grid grid-cols-1 gap-2 mb-3">
+                <div className="p-2.5 bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] rounded">
+                  <p className="font-mono text-[9px] text-[#EF4444] mb-1">❌ BEFORE (Vague)</p>
+                  <p className="text-[11px] text-[#7A9AB5]">"{fw.beforeAfter.before}"</p>
+                </div>
+                <div className="p-2.5 bg-[rgba(45,211,111,0.08)] border border-[rgba(45,211,111,0.2)] rounded">
+                  <p className="font-mono text-[9px] text-[#2DD36F] mb-1">✓ AFTER (Structured)</p>
+                  <p className="text-[11px] text-[#9DBBD4]">"{fw.beforeAfter.after}"</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-[#7A9AB5] leading-relaxed">
+                <span className="text-[#C9A84C] font-semibold">Key improvement:</span> {fw.beforeAfter.improvement}
+              </p>
+            </div>
+          )}
 
           {/* Apply Hints */}
           {applyHints && (
@@ -602,6 +674,47 @@ function ScoreGrid({ criteria }: { criteria: { n: string; p: boolean }[] }) {
       )}>
         {pass}/{total} CRITERIA MET — {Math.round(pass / total * 100)}%
       </div>
+    </div>
+  );
+}
+
+// Saved Score Display Component for Review Mode
+function SavedScoreDisplay({ label, answer, score }: { label: string; answer: string; score: { n: string; p: boolean }[] }) {
+  const pass = score?.filter(c => c.p).length || 0;
+  const total = score?.length || 0;
+  const cls = getScoreClass(pass, total);
+
+  return (
+    <div className="bg-[#08131E] border border-[rgba(45,211,111,0.25)] rounded p-3.5 mb-3">
+      <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-2">{label}</p>
+      <div className="text-[13px] text-[#9DBBD4] leading-relaxed whitespace-pre-wrap mb-3 p-2.5 bg-[#0D1E2E] rounded">{answer || 'No answer saved'}</div>
+      {score && score.length > 0 && (
+        <>
+          <p className="font-mono text-[9px] font-bold text-[#3D5870] tracking-widest uppercase mb-2">FEEDBACK RECEIVED</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {score.map((cr, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "flex items-center justify-between p-2 px-2.5 bg-[#112030] rounded text-[10px]",
+                  cr.p ? "border-l-2 border-[#2DD36F] text-white" : "border-l-2 border-[rgba(239,68,68,0.3)] text-[#3D5870]"
+                )}
+              >
+                <span>{cr.n}</span>
+                <span className="text-[11px]">{cr.p ? '✓' : '✗'}</span>
+              </div>
+            ))}
+          </div>
+          <div className={cn(
+            "mt-2 p-2 rounded text-center font-mono text-[11px] font-bold tracking-wider",
+            cls === 'great' && "bg-[rgba(45,211,111,0.1)] border border-[rgba(45,211,111,0.25)] text-[#2DD36F]",
+            cls === 'ok' && "bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.25)] text-[#F59E0B]",
+            cls === 'low' && "bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] text-[#EF4444]"
+          )}>
+            {pass}/{total} CRITERIA MET — {Math.round(pass / total * 100)}%
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -751,6 +864,26 @@ function SavedAnswerDisplay({ label, answer }: { label: string; answer: string }
   );
 }
 
+// Pro Tips Component
+function ProTipsSection() {
+  return (
+    <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+      <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">⚡ PRO TIPS FOR BETTER PROMPTS</p>
+      <div className="space-y-3">
+        {PRO_TIPS.map((tip, idx) => (
+          <div key={idx} className="flex items-start gap-2.5 p-2.5 bg-[#08131E] rounded border border-[#1C3348]">
+            <span className="text-[#C9A84C] text-[14px] shrink-0">💡</span>
+            <div>
+              <p className="text-[12px] font-semibold text-white">{tip.title}</p>
+              <p className="text-[11px] text-[#7A9AB5] leading-relaxed mt-0.5">{tip.tip}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Main Module 1 Component
 export default function Module1Page() {
   const router = useRouter();
@@ -811,15 +944,18 @@ export default function Module1Page() {
     try {
       const saved = localStorage.getItem('swipeup-module1-answers');
       if (saved) {
-        setSavedAnswers(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setSavedAnswers(parsed);
+        return parsed;
       }
     } catch (e) {
       console.error('Error loading saved answers:', e);
     }
+    return null;
   }, []);
 
-  // Save answers to localStorage
-  const saveAnswers = useCallback((answers: Partial<SavedAnswers>) => {
+  // Save answers to localStorage - now includes scores
+  const saveAnswersWithScores = useCallback((answers: Partial<SavedAnswers>) => {
     try {
       const existing = localStorage.getItem('swipeup-module1-answers');
       const parsed = existing ? JSON.parse(existing) : {};
@@ -838,9 +974,9 @@ export default function Module1Page() {
     }
   }, [isLoaded, progress.studentName, router]);
 
-  // Check if returning user - properly restore all state
+  // Check if returning user - properly restore all state including scores
   useEffect(() => {
-    loadSavedAnswers();
+    const savedData = loadSavedAnswers();
     
     // If module is completed, show consolidate phase (review mode)
     if (progress.course2ModulesCompleted.includes(1)) {
@@ -856,18 +992,22 @@ export default function Module1Page() {
       setWd2Done(true);
       setWd3Done(true);
       
-      // Load saved answers
-      const saved = localStorage.getItem('swipeup-module1-answers');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setWd2Txt(parsed.wd2Txt || '');
-        setWd3Txt(parsed.wd3Txt || '');
-        setYd1Txt(parsed.yd1Txt || '');
-        setYd2Txt(parsed.yd2Txt || '');
-        setYd3Txt(parsed.yd3Txt || '');
-        setFp(parsed.fp || '');
-        setFe(parsed.fe || '');
-        setModuleXP(parsed.moduleXP || 700);
+      // Load saved answers and scores
+      if (savedData) {
+        setWd2Txt(savedData.wd2Txt || '');
+        setWd2Score(savedData.wd2Score || null);
+        setWd3Txt(savedData.wd3Txt || '');
+        setWd3Score(savedData.wd3Score || null);
+        setYd1Txt(savedData.yd1Txt || '');
+        setYd1Score(savedData.yd1Score || null);
+        setYd2Txt(savedData.yd2Txt || '');
+        setYd2Score(savedData.yd2Score || null);
+        setYd3Txt(savedData.yd3Txt || '');
+        setYd3Score(savedData.yd3Score || null);
+        setFp(savedData.fp || '');
+        setFe(savedData.fe || '');
+        setFScore(savedData.fScore || null);
+        setModuleXP(savedData.moduleXP || 700);
       }
       
       setPhase('consolidate');
@@ -925,7 +1065,8 @@ export default function Module1Page() {
     const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 25);
     addXP(xp);
     setModuleXP(prev => prev + xp);
-    saveAnswers({ wd2Txt });
+    // Save both text and score
+    saveAnswersWithScores({ wd2Txt, wd2Score: criteria });
   };
 
   const handleWd2Scaffold = (fields: Record<string, string>) => {
@@ -947,10 +1088,11 @@ export default function Module1Page() {
       { n: 'Sufficient detail', p: wordCount(wd3Txt) >= 40 },
     ];
     setWd3Score(criteria);
-    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 50);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 25);
     addXP(xp);
     setModuleXP(prev => prev + xp);
-    saveAnswers({ wd3Txt });
+    setWd3Done(true);
+    saveAnswersWithScores({ wd3Txt, wd3Score: criteria });
   };
 
   const handleWd3Scaffold = (fields: Record<string, string>) => {
@@ -961,401 +1103,251 @@ export default function Module1Page() {
     }
   };
 
-  // You Do handlers
+  // YD1 handlers
   const handleYd1Submit = () => {
     const t = yd1Txt.toLowerCase();
     const criteria = [
-      { n: 'Role assigned', p: t.includes('act as') || t.includes('you are') || t.includes('as a') },
-      { n: 'Product named', p: t.includes('velara') || t.includes('midnight edit') },
-      { n: 'Word count specified', p: t.includes('150') || t.includes('word') },
-      { n: 'Brand voice included', p: t.includes('sophisticated') || t.includes('sustainable') || t.includes('british') || t.includes('elegant') },
-      { n: 'Output format clear', p: t.includes('description') || t.includes('paragraph') || t.includes('copy') },
+      { n: 'Role assigned', p: t.includes('act as') || t.includes('you are') },
+      { n: 'Context provided', p: t.includes('velara') || t.includes('fashion') || t.includes('brand') || t.includes('collection') },
+      { n: 'Task clarity', p: t.includes('write') || t.includes('create') || t.includes('generate') || t.includes('compose') },
+      { n: 'Format specified', p: t.includes('email') || t.includes('subject') || t.includes('150') || t.includes('word') },
+      { n: 'Sufficient detail', p: wordCount(yd1Txt) >= 35 },
     ];
     setYd1Score(criteria);
-    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 100);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 30);
     addXP(xp);
     setModuleXP(prev => prev + xp);
-    saveAnswers({ yd1Txt });
+    saveAnswersWithScores({ yd1Txt, yd1Score: criteria });
   };
 
+  // YD2 handlers
   const handleYd2Submit = () => {
     const t = yd2Txt.toLowerCase();
     const criteria = [
-      { n: 'Quantity specified', p: t.includes('5') || t.includes('five') },
-      { n: 'Character limit', p: t.includes('150') || t.includes('character') },
-      { n: 'Emoji requirement', p: t.includes('emoji') },
-      { n: 'Hashtag requirement', p: t.includes('hashtag') },
+      { n: 'Framework used', p: t.includes('context') || t.includes('role') || t.includes('action') || t.includes('objective') || t.includes('instruction') },
+      { n: 'Role assigned', p: t.includes('act as') || t.includes('you are') },
+      { n: 'Stakeholder context', p: t.includes('board') || t.includes('director') || t.includes('investor') || t.includes('stakeholder') },
+      { n: 'Clear objective', p: t.includes('inform') || t.includes('update') || t.includes('summarise') || t.includes('report') },
       { n: 'Sufficient detail', p: wordCount(yd2Txt) >= 40 },
     ];
     setYd2Score(criteria);
-    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 150);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 30);
     addXP(xp);
     setModuleXP(prev => prev + xp);
-    saveAnswers({ yd2Txt });
+    saveAnswersWithScores({ yd2Txt, yd2Score: criteria });
   };
 
+  // YD3 handlers
   const handleYd3Submit = () => {
     const t = yd3Txt.toLowerCase();
     const criteria = [
-      { n: 'Empathy/apology', p: t.includes('empath') || t.includes('apolog') },
-      { n: 'Discount specified', p: t.includes('10%') || t.includes('discount') || t.includes('compensation') },
-      { n: 'Brand voice defined', p: t.includes('brand voice') || t.includes('tone') || t.includes('sophisticated') },
-      { n: 'Anti-template note', p: t.includes('template') || t.includes('personal') || t.includes('generic') || t.includes('human') },
-      { n: 'Sufficient detail', p: wordCount(yd3Txt) >= 50 },
+      { n: 'Role assigned', p: t.includes('act as') || t.includes('you are') },
+      { n: 'Scenario context', p: t.includes('customer') || t.includes('complaint') || t.includes('issue') || t.includes('problem') },
+      { n: 'Steps defined', p: t.includes('step') || t.includes('first') || t.includes('then') || t.includes('next') || t.includes('finally') },
+      { n: 'Constraints set', p: t.includes('under') || t.includes('avoid') || t.includes('do not') || t.includes('must') || t.includes('without') },
+      { n: 'Sufficient detail', p: wordCount(yd3Txt) >= 45 },
     ];
     setYd3Score(criteria);
-    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 200);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 35);
     addXP(xp);
     setModuleXP(prev => prev + xp);
-    saveAnswers({ yd3Txt });
+    saveAnswersWithScores({ yd3Txt, yd3Score: criteria });
   };
 
-  // Final handler
-  const handleFinalSubmit = async () => {
+  // Final submit handler
+  const handleFinalSubmit = () => {
     const t = fp.toLowerCase();
-    const e = fe.toLowerCase();
     const criteria = [
-      { n: 'Role assigned', p: t.includes('act as') || t.includes('you are') || t.includes('as a') },
-      { n: 'Board audience', p: t.includes('board') || t.includes('director') || t.includes('executive') || t.includes('stakeholder') },
-      { n: 'Sales context', p: t.includes('sales') || t.includes('revenue') || t.includes('performance') || t.includes('update') },
-      { n: 'Format specified', p: t.includes('bullet') || t.includes('section') || t.includes('summary') || t.includes('format') || t.includes('structure') },
-      { n: 'Prompt length', p: wordCount(fp) >= 35 },
-      { n: 'Problem identified', p: e.includes('missing') || e.includes('lack') || e.includes('vague') || e.includes('unclear') || e.includes('no ') },
-      { n: 'Improvement explained', p: e.includes('context') || e.includes('specific') || e.includes('detail') || e.includes('audience') || e.includes('role') || e.includes('framework') },
-      { n: 'Explanation depth', p: wordCount(fe) >= 25 },
+      { n: 'Framework applied', p: t.includes('context') || t.includes('role') || t.includes('action') || t.includes('objective') || t.includes('instruction') || t.includes('tone') },
+      { n: 'Task context', p: t.includes('email') || t.includes('sales') || t.includes('performance') || t.includes('board') || t.includes('update') },
+      { n: 'Sufficient detail', p: wordCount(fp) >= 50 },
     ];
     setFScore(criteria);
-    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 250);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 50);
     addXP(xp);
     setModuleXP(prev => prev + xp);
-    
-    // Save all final answers
-    saveAnswers({ fp, fe, moduleXP: moduleXP + xp });
-    
-    completeModule2(1);
-    addBadge('Prompt Specialist');
     setFDone(true);
-
-    await logProgress({
-      studentName: progress.studentName,
-      studentId: progress.studentId,
-      event: 'Module 1 Complete',
-      details: `Total XP earned: ${moduleXP + xp}`,
-      totalXP: progress.totalXP + xp,
-    });
-
-    setPhase('consolidate');
+    
+    // Save all final data
+    saveAnswersWithScores({ fp, fe, fScore: criteria });
+    
+    // Complete module
+    completeModule2(1);
+    addBadge('prompt-engineer-1');
+    setTimeout(() => {
+      setPhase('consolidate');
+    }, 2000);
   };
 
-  // Prepare progress calculation
-  const prepareProgress = Math.min(90, Object.keys(mcqAnswers).length * 12 + (paper1Read ? 8 : 0) + (paper2Read ? 8 : 0) + (videosWatched.filter(Boolean).length * 6));
+  // Calculate prepare progress
+  const prepareProgress = Math.round(
+    ((paper1Read ? 20 : 0) + (paper2Read ? 20 : 0) + videosWatched.filter(Boolean).length * 10 + (mcqSubmitted && mcqScore === 5 ? 30 : 0))
+  );
 
-  // Loading state
-  if (!isLoaded || !progress.studentName) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#08131E]">
-        <div className="spinner" />
-      </div>
-    );
-  }
-
-  return (
+  // Render Prepare Phase
+  const renderPrepare = () => (
     <div className="min-h-screen bg-[#08131E]">
       {/* Header */}
-      <header className="bg-[rgba(8,19,30,0.97)] border-b border-[#1C3348] sticky top-0 z-50 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-5 py-2.5">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => router.push('/course2')}
-              className="text-[#7A9AB5] hover:text-[#C9A84C] transition-colors"
-            >
-              ← Back
-            </button>
-            <div className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest border border-[#C9A84C] px-2 py-1 rounded">SWIPEUP</div>
-            <span className="font-semibold text-[13px] text-[#7A9AB5]">Module 01 — Prompt Engineering</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[13px] font-bold text-[#C9A84C]">⭐ {progress.totalXP + moduleXP} XP</span>
-            {isReviewMode && (
-              <span className="font-mono text-[9px] px-2 py-1 rounded tracking-wider bg-[rgba(45,211,111,0.1)] text-[#2DD36F] border border-[rgba(45,211,111,0.3)]">
-                REVIEW MODE
-              </span>
-            )}
-            <span className={cn(
-              "font-mono text-[10px] px-2 py-1 rounded tracking-wider",
-              mcqScore === 5 ? "border border-[#C9A84C] text-[#C9A84C]" : "border border-[#3D5870] text-[#3D5870]"
-            )}>
-              {mcqScore === 5 ? 'CLEARED' : 'UNCLEARED'}
-            </span>
-          </div>
-        </div>
-      </header>
+      <div className="px-5 py-4 border-b border-[#1C3348]">
+        <BackButton onClick={() => router.push('/course2')} label="Back to Course" />
+        <h1 className="font-mono text-[22px] font-bold text-white tracking-tight">PREPARE</h1>
+        <p className="text-[12px] text-[#7A9AB5] mt-1">Build your foundation before entering Headquarters</p>
+      </div>
 
       {/* Progress Bar */}
-      <ProgressBar 
-        phase={phase} 
-        prepareProgress={prepareProgress}
-        engageStage={engageStage}
-        weDoTask={weDoTask}
-        youDoTask={youDoTask}
-      />
+      <ProgressBar phase={phase} prepareProgress={prepareProgress} engageStage={engageStage} weDoTask={weDoTask} youDoTask={youDoTask} />
 
-      {/* Phase Nav */}
-      <PhaseIndicator currentPhase={phase} onPhaseClick={setPhase} isCompleted={isReviewMode} />
+      {/* Content */}
+      <div className="p-5 space-y-4">
+        {/* Intel Files Section */}
+        <div className="mb-4">
+          <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📂 INTEL FILES</p>
+          <p className="text-[12px] text-[#7A9AB5] mb-3">Read the background materials to prepare for your mission.</p>
+          <div className="space-y-2">
+            <IntelFileCard
+              title="AI in Business: A Strategic Overview"
+              subtitle="Kaplan & Haenlein (2019) — Understanding AI fundamentals"
+              read={paper1Read}
+              onToggle={() => setPaper1Read(!paper1Read)}
+            />
+            <IntelFileCard
+              title="Velara Brand Briefing Document"
+              subtitle="Internal company context for your mission tasks"
+              read={paper2Read}
+              onToggle={() => setPaper2Read(!paper2Read)}
+            />
+          </div>
+        </div>
 
-      <main className="max-w-[760px] mx-auto px-4 py-6 pb-24">
-        {/* PREPARE PHASE */}
-        {phase === 'prepare' && (
-          <div className="animate-fade-in">
-            {/* Back to Course Button */}
+        {/* Video Resources */}
+        <div className="mb-4">
+          <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">🎥 VIDEO TRAINING</p>
+          <p className="text-[12px] text-[#7A9AB5] mb-3">Watch these short tutorials on prompt engineering.</p>
+          <div className="grid grid-cols-3 gap-2">
+            {videos.map((v, i) => (
+              <VideoCard
+                key={v.title}
+                {...v}
+                watched={videosWatched[i]}
+                onToggle={() => {
+                  const newWatched = [...videosWatched];
+                  newWatched[i] = !newWatched[i];
+                  setVideosWatched(newWatched);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Pro Tips - New Section */}
+        <ProTipsSection />
+
+        {/* MCQ Gate */}
+        <div className="mt-4">
+          <MCQGate
+            answers={mcqAnswers}
+            submitted={mcqSubmitted}
+            score={mcqScore}
+            onAnswer={handleMcqAnswer}
+            onSubmit={handleMcqSubmit}
+            onRetry={handleMcqRetry}
+            isReviewMode={isReviewMode}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render Engage Phase
+  const renderEngage = () => {
+    // I Do Stage
+    if (engageStage === 'iDo') {
+      return (
+        <div className="min-h-screen bg-[#08131E]">
+          <div className="px-5 py-4 border-b border-[#1C3348]">
             <BackButton onClick={() => router.push('/course2')} label="Back to Course" />
-            
-            {/* Transmission */}
-            <div className="bg-[#112030] border border-[#1C3348] border-l-[3px] border-l-[#C9A84C] rounded-r-lg p-5 mb-5">
-              <div className="flex items-center gap-2.5 flex-wrap mb-3">
-                <span className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest border border-[#C9A84C] px-2 py-0.5 rounded">INCOMING</span>
-                <span className="font-mono text-[10px] text-[#C9A84C]">Sarah Chen / MD Velara</span>
-                <span className="font-mono text-[10px] text-[#3D5870] ml-auto">09:02 TODAY</span>
+            <h1 className="font-mono text-[22px] font-bold text-white tracking-tight">I DO — Watch & Learn</h1>
+            <p className="text-[12px] text-[#7A9AB5] mt-1">Observe how a senior prompt engineer structures their work</p>
+          </div>
+          <ProgressBar phase={phase} prepareProgress={prepareProgress} engageStage={engageStage} weDoTask={weDoTask} youDoTask={youDoTask} />
+          
+          <div className="p-5">
+            <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+              <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">📋 THE SCENARIO</p>
+              <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                A Velara marketing team member needs to write an Instagram caption for a new sustainable collection. Their first attempt is:
+              </p>
+              <div className="p-3 bg-[#08131E] rounded border border-[#1C3348] mb-4">
+                <p className="text-[12px] text-[#EF4444] italic">"Write something about our new collection."</p>
               </div>
               <p className="text-[13px] text-[#9DBBD4] leading-relaxed">
-                We need your help — urgently. Our marketing team has been using AI for three months and the output is <strong className="text-white">embarrassing</strong>. Captions are generic, emails are completely off-brand, and nothing sounds like us. I&apos;ve cleared full intel access for you. <strong className="text-white">Review the files below, pass the security clearance check, and meet us inside HQ.</strong> — Sarah
+                This prompt fails because it lacks <span className="text-[#F59E0B]">role, context, format, and tone</span>. The AI will produce generic content that doesn&apos;t match Velara&apos;s brand voice.
               </p>
             </div>
 
-            {/* Intel Files */}
-            <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3 flex items-center gap-2.5">
-              Intel Files
-              <span className="flex-1 h-px bg-[#1C3348]" />
-            </p>
-            <div className="grid grid-cols-2 gap-2.5 mb-5">
-              <IntelFileCard
-                title="Kaplan & Haenlein (2019)"
-                subtitle='Business Horizons 62(1) — "Siri, Siri in my hand"'
-                read={paper1Read}
-                onToggle={() => setPaper1Read(!paper1Read)}
-              />
-              <IntelFileCard
-                title="Haenlein & Kaplan (2019)"
-                subtitle='California Management Review 61(4) — "A brief history of AI"'
-                read={paper2Read}
-                onToggle={() => setPaper2Read(!paper2Read)}
-              />
-            </div>
-
-            {/* Videos */}
-            <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3 flex items-center gap-2.5">
-              Briefing Videos
-              <span className="flex-1 h-px bg-[#1C3348]" />
-            </p>
-            <div className="grid grid-cols-3 gap-2.5 mb-5">
-              {videos.map((video, idx) => (
-                <VideoCard
-                  key={idx}
-                  {...video}
-                  watched={videosWatched[idx]}
-                  onToggle={() => {
-                    const newWatched = [...videosWatched];
-                    newWatched[idx] = true;
-                    setVideosWatched(newWatched);
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* MCQ */}
-            <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3 flex items-center gap-2.5">
-              Security Clearance Check
-              <span className="flex-1 h-px bg-[#1C3348]" />
-            </p>
-            <MCQGate
-              answers={mcqAnswers}
-              submitted={mcqSubmitted}
-              score={mcqScore}
-              onAnswer={(qi, oi) => handleMcqAnswer(qi, oi)}
-              onSubmit={handleMcqSubmit}
-              onRetry={handleMcqRetry}
-              isReviewMode={isReviewMode}
+            <FrameworkCard 
+              activeFW={activeFW} 
+              setActiveFW={setActiveFW} 
+              isOpen={fwOpen} 
+              setIsOpen={setFwOpen} 
+              taskKey="wd2"
+              showBeforeAfter={true}
             />
+
+            <div className="bg-[rgba(45,211,111,0.06)] border border-[rgba(45,211,111,0.2)] rounded-lg p-4">
+              <p className="font-mono text-[10px] font-bold text-[#2DD36F] tracking-widest uppercase mb-3">✓ THE IMPROVED PROMPT (CRAFT)</p>
+              <p className="text-[13px] text-[#9DBBD4] leading-relaxed p-3 bg-[#08131E] rounded mb-3">
+                Context: Velara is a British sustainable luxury fashion brand known for ethical production and timeless designs.
+                Role: Act as a senior social media copywriter.
+                Action: Write an Instagram caption for our new Summer Solstice collection.
+                Format: Under 150 characters, include one emoji, end with #VelaraStyle
+                Tone: Sophisticated, warm, aspirational — never pushy or salesy.
+              </p>
+              <p className="text-[12px] text-[#7A9AB5]">
+                ✓ Notice how each element of CRAFT is addressed systematically. The AI now has everything it needs to produce on-brand content.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setEngageStage('weDo')}
+              className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+            >
+              CONTINUE TO WE DO →
+            </button>
           </div>
-        )}
+        </div>
+      );
+    }
 
-        {/* ENGAGE PHASE */}
-        {phase === 'engage' && (
-          <div className="animate-fade-in">
-            {/* Back Button */}
-            <BackButton onClick={() => setPhase('prepare')} label="Back to Prepare" />
-            
-            {/* HQ Banner */}
-            <div className="bg-gradient-to-br from-[rgba(201,168,76,0.1)] to-[rgba(201,168,76,0.04)] border border-[rgba(201,168,76,0.3)] rounded-lg px-4.5 py-3 flex items-center justify-between mb-5">
-              <span className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest">📍 INSIDE VELARA HQ</span>
-              <span className="font-mono text-[10px] text-[#3D5870]">Marketing Dept · Floor 3</span>
-            </div>
+    // We Do Stage
+    if (engageStage === 'weDo') {
+      return (
+        <div className="min-h-screen bg-[#08131E]">
+          <div className="px-5 py-4 border-b border-[#1C3348]">
+            <BackButton onClick={() => setEngageStage('iDo')} label="Back to I Do" />
+            <h1 className="font-mono text-[22px] font-bold text-white tracking-tight">WE DO — Practice Together</h1>
+            <p className="text-[12px] text-[#7A9AB5] mt-1">Work through exercises with guidance and feedback</p>
+          </div>
+          <ProgressBar phase={phase} prepareProgress={prepareProgress} engageStage={engageStage} weDoTask={weDoTask} youDoTask={youDoTask} />
 
-            {/* Stage Rail */}
-            <div className="flex gap-1.5 mb-5">
-              {[
-                { id: 'iDo', label: 'I Do' },
-                { id: 'weDo', label: 'We Do' },
-                { id: 'youDo', label: 'You Do' },
-                { id: 'final', label: 'Final' },
-              ].map((s, i) => {
-                const stages = ['iDo', 'weDo', 'youDo', 'final'];
-                const ci = stages.indexOf(engageStage);
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      if (i <= ci || isReviewMode) {
-                        setEngageStage(s.id as EngageStage);
-                      }
-                    }}
-                    disabled={i > ci && !isReviewMode}
-                    className={cn(
-                      "flex-1 py-2.5 text-center font-mono text-[10px] tracking-widest uppercase rounded border transition-all",
-                      i < ci && "bg-[rgba(45,211,111,0.07)] border-[rgba(45,211,111,0.3)] text-[#2DD36F] hover:bg-[rgba(45,211,111,0.1)] cursor-pointer",
-                      i === ci && "bg-[rgba(201,168,76,0.12)] border-[#C9A84C] text-[#C9A84C]",
-                      i > ci && !isReviewMode && "border-[#1C3348] text-[#3D5870] cursor-not-allowed",
-                      i > ci && isReviewMode && "border-[rgba(45,211,111,0.2)] text-[#2DD36F] cursor-pointer hover:bg-[rgba(45,211,111,0.05)]"
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* I DO */}
-            {engageStage === 'iDo' && (
-              <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">BRIEFING</span>
-                </div>
-                <h3 className="font-semibold text-[17px] text-white mb-2">I Do — Watch Marcus&apos;s Approach</h3>
-                <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
-                  Senior Consultant Marcus Webb handled the same problem at a previous client. Watch how he structures every prompt before you try it yourself. Pay attention to how he uses the CRAFT framework.
-                </p>
-                
-                {/* Video */}
-                <div className="w-full aspect-video rounded border border-[#1C3348] bg-[#08131E] overflow-hidden mb-3.5">
-                  <iframe
-                    src="https://ulaw365-my.sharepoint.com/personal/abhirajsinh_thakor83_law_ac_uk/_layouts/15/embed.aspx?UniqueId=86ef4dee-b7c2-440f-849f-ef587752b1f5&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create"
-                    className="w-full h-full border-none"
-                    allowFullScreen
-                    title="Marcus Webb Walkthrough"
-                  />
-                </div>
-
-                {/* Key Takeaways */}
-                <div className="bg-[rgba(201,168,76,0.05)] border border-[rgba(201,168,76,0.15)] rounded p-4 mb-4">
-                  <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📝 KEY TAKEAWAYS</p>
-                  <ul className="text-[12px] text-[#9DBBD4] space-y-2">
-                    <li className="flex items-start gap-2">
-                      <span className="text-[#C9A84C]">1.</span>
-                      <span><strong className="text-white">Role first:</strong> Always tell the AI who it should be before asking it to do anything</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-[#C9A84C]">2.</span>
-                      <span><strong className="text-white">Context matters:</strong> The more background you give, the more relevant the output</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-[#C9A84C]">3.</span>
-                      <span><strong className="text-white">Be specific:</strong> "Under 150 characters" is better than "short"</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-[#C9A84C]">4.</span>
-                      <span><strong className="text-white">Tone sets the voice:</strong> Professional vs casual changes everything</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Checkbox */}
-                <label className={cn(
-                  "flex items-center gap-2.5 p-3 px-3.5 rounded border cursor-pointer transition-all",
-                  idoCheck ? "border-[rgba(45,211,111,0.4)] bg-[rgba(45,211,111,0.05)] text-[#2DD36F]" : "border-[#1C3348] bg-[#08131E] text-[#7A9AB5]"
-                )}>
-                  <input
-                    type="checkbox"
-                    checked={idoCheck}
-                    onChange={(e) => setIdoCheck(e.target.checked)}
-                    className="accent-[#C9A84C] w-4 h-4"
-                  />
-                  <span className="text-[12px]">I have watched Marcus&apos;s walkthrough and I&apos;m ready to practise</span>
-                </label>
-
-                {idoCheck && (
-                  <button
-                    onClick={() => setEngageStage('weDo')}
-                    className="w-full mt-3.5 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
-                  >
-                    BEGIN WE DO CHALLENGES →
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* WE DO */}
-            {engageStage === 'weDo' && (
+          <div className="p-5">
+            {/* Task 1: Identify Missing Elements */}
+            {weDoTask === 1 && (
               <div>
-                {/* Back Button */}
-                <BackButton onClick={() => setEngageStage('iDo')} label="Back to I Do" />
-                
-                {/* Step Dots */}
-                <div className="flex gap-1.5 mb-5">
-                  {[1, 2, 3].map(i => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        if (i <= weDoTask || isReviewMode) {
-                          setWeDoTask(i);
-                        }
-                      }}
-                      disabled={i > weDoTask && !isReviewMode}
-                      className={cn(
-                        "flex-1 h-1.5 rounded transition-all",
-                        i < weDoTask && "bg-[#2DD36F]",
-                        i === weDoTask && "bg-[#C9A84C]",
-                        i > weDoTask && !isReviewMode && "bg-[#1C3348] cursor-not-allowed",
-                        i > weDoTask && isReviewMode && "bg-[#2DD36F] cursor-pointer"
-                      )}
-                    />
-                  ))}
-                </div>
-
-                <h3 className="font-semibold text-[18px] text-white mb-1">We Do — Learn the Frameworks</h3>
-                <p className="text-[13px] text-[#7A9AB5] mb-5">Three frameworks, three tasks. Open the reference card, choose a framework, then apply it to the brief below.</p>
-
-                {/* Framework Card */}
-                <FrameworkCard
-                  activeFW={activeFW}
-                  setActiveFW={setActiveFW}
-                  isOpen={fwOpen}
-                  setIsOpen={setFwOpen}
-                  taskKey={weDoTask === 1 ? 'wd2' : 'wd3'}
-                />
-
-                {/* Task 1: Diagnose */}
-                {weDoTask === 1 && (
-                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">TASK 1 OF 3</span>
-                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">+20 XP</span>
-                    </div>
-                    <h4 className="font-semibold text-[17px] text-white mb-2">Diagnose the Broken Prompt</h4>
-                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
-                      Before writing prompts, you need to spot what&apos;s missing. Velara&apos;s team sent this last Monday. Using the frameworks above as your guide, identify every element that&apos;s absent — select all that apply.
-                    </p>
-                    
-                    <div className="bg-[#08131E] border border-[#1C3348] rounded p-3.5 px-4 font-mono text-[13px] text-[#9DBBD4] mb-4 relative">
-                      <span className="absolute -top-2 left-3 text-[9px] font-bold tracking-widest text-[#3D5870] bg-[#112030] px-1.5">ORIGINAL PROMPT</span>
-                      &quot;Write about our summer dress&quot;
-                    </div>
-
-                    {WD_OPTS.map(opt => (
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">TASK 1: IDENTIFY THE PROBLEMS</p>
+                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                    A colleague wrote this prompt: <span className="text-[#EF4444]">&quot;Write something about our new collection.&quot;</span>
+                  </p>
+                  <p className="text-[12px] text-[#7A9AB5] mb-3">Select ALL the missing elements that make this prompt ineffective:</p>
+                  
+                  <div className="space-y-2">
+                    {WD_OPTS.map((opt) => (
                       <label
                         key={opt}
                         className={cn(
-                          "flex items-center gap-2.5 p-2.5 px-3 border rounded cursor-pointer transition-all mb-1.5 text-[12px]",
-                          wd1Sel.includes(opt) ? "border-[#C9A84C] bg-[rgba(201,168,76,0.12)] text-white" : "border-[#1C3348] text-[#7A9AB5] hover:border-[rgba(201,168,76,0.4)] hover:bg-[rgba(201,168,76,0.12)]"
+                          "flex items-center gap-2.5 p-3 border rounded-md cursor-pointer transition-all",
+                          wd1Sel.includes(opt) ? "border-[#C9A84C] bg-[rgba(201,168,76,0.12)] text-white" : "border-[#1C3348] text-[#7A9AB5] hover:border-[rgba(201,168,76,0.4)]"
                         )}
                       >
                         <input
@@ -1363,772 +1355,629 @@ export default function Module1Page() {
                           checked={wd1Sel.includes(opt)}
                           onChange={() => {
                             if (wd1Sel.includes(opt)) {
-                              setWd1Sel(wd1Sel.filter(x => x !== opt));
+                              setWd1Sel(wd1Sel.filter(s => s !== opt));
                             } else {
                               setWd1Sel([...wd1Sel, opt]);
                             }
                           }}
                           className="accent-[#C9A84C]"
                         />
-                        {opt}
+                        <span className="text-[13px]">{opt}</span>
                       </label>
                     ))}
+                  </div>
+                </div>
 
-                    {wd1Done ? (
-                      <>
-                        <div className="p-3.5 bg-[rgba(45,211,111,0.08)] border border-[rgba(45,211,111,0.25)] rounded text-[12px] text-[#2DD36F] leading-relaxed mt-3">
-                          <strong>All four correct.</strong> Map these back to any framework — CRAFT, CO-STAR, RISEN — and you&apos;ll see the same gaps: no role, no brand context, no audience, no format. That&apos;s why every output was generic.
-                        </div>
-                        <XPBurst amount={20} label="DIAGNOSIS COMPLETE" />
-                        <button
-                          onClick={() => setWeDoTask(2)}
-                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          CONTINUE TO TASK 2 →
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          if (WD_OPTS.every(o => wd1Sel.includes(o))) {
-                            setWd1Done(true);
-                            addXP(20);
-                            setModuleXP(prev => prev + 20);
-                          }
-                        }}
-                        disabled={wd1Sel.length < 4}
-                        className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
-                      >
-                        SUBMIT DIAGNOSIS
-                      </button>
-                    )}
+                {wd1Sel.length === 4 && !wd1Done && (
+                  <div className="bg-[rgba(45,211,111,0.1)] border border-[rgba(45,211,111,0.25)] rounded-lg p-4 mb-4">
+                    <XPBurst amount={15} label="Analysis Complete" />
+                    <p className="text-[13px] text-[#9DBBD4] text-center">
+                      Correct! The prompt is missing all four critical elements: role, format, brand context, and audience. Let&apos;s practice writing better prompts.
+                    </p>
                   </div>
                 )}
 
-                {/* Task 2: Instagram */}
-                {weDoTask === 2 && (
-                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">TASK 2 OF 3</span>
-                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">+25 XP</span>
-                    </div>
-                    <h4 className="font-semibold text-[17px] text-white mb-2">Rewrite the Instagram Prompt</h4>
-                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
-                      Choose a framework from the card above and apply it to improve this prompt. The reference card shows exactly how each letter maps to this task.
-                    </p>
-                    
-                    <div className="bg-[#08131E] border border-[#1C3348] rounded p-3.5 px-4 font-mono text-[13px] text-[#9DBBD4] mb-4 relative">
-                      <span className="absolute -top-2 left-3 text-[9px] font-bold tracking-widest text-[#3D5870] bg-[#112030] px-1.5">ORIGINAL PROMPT</span>
-                      &quot;Make our Instagram post good&quot;
-                    </div>
-
-                    {isReviewMode && savedAnswers?.wd2Txt && (
-                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.wd2Txt} />
-                    )}
-
-                    <textarea
-                      value={wd2Txt}
-                      onChange={(e) => setWd2Txt(e.target.value)}
-                      placeholder="Choose CRAFT, CO-STAR, or RISEN above, then write your improved prompt here..."
-                      className={cn(
-                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
-                        isReviewMode && "opacity-75"
-                      )}
-                      readOnly={isReviewMode}
-                    />
-                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
-                      <span className={cn(
-                        "font-mono text-[10px]",
-                        wordCount(wd2Txt) >= 30 ? "text-[#2DD36F]" : "text-[#3D5870]"
-                      )}>
-                        {wordCount(wd2Txt)} words
-                      </span>
-                      <span className="font-mono text-[10px] text-[#3D5870]">AIM FOR 30+ WORDS</span>
-                    </div>
-
-                    {wd2Score && !isReviewMode ? (
-                      <>
-                        <ScoreGrid criteria={wd2Score} />
-                        {wd2Score.filter(c => !c.p).length > 0 && wd2Score.filter(c => c.p).length < 4 && (
-                          <MissBox
-                            missed={wd2Score.filter(c => !c.p)}
-                            hints={{
-                              'Role assigned': 'Start with "Act as a social media copywriter for Velara"',
-                              'Platform context': 'Name the platform — Instagram — so the AI formats correctly',
-                              'Brand reference': 'Name the brand: Velara, and add 1-2 words about who they are',
-                              'Format specified': 'Specify the output: caption, under 150 characters, with hashtag',
-                              'Sufficient detail': 'Add tone, product details — aim for 30+ words total',
-                            }}
-                          />
-                        )}
-                        {wd2Score.filter(c => c.p).length < 4 && (
-                          <Scaffold task="wd2" activeFW={activeFW} onBuild={handleWd2Scaffold} />
-                        )}
-                        <XPBurst amount={xpForScore(wd2Score.filter(c => c.p).length, wd2Score.length, 25)} label="TASK SCORED" />
-                        {!wd2Done && (
-                          <button
-                            onClick={() => { setWd2Done(true); setWeDoTask(3); }}
-                            className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                          >
-                            CONTINUE TO TASK 3 →
-                          </button>
-                        )}
-                      </>
-                    ) : !isReviewMode ? (
-                      <button
-                        onClick={handleWd2Submit}
-                        disabled={wordCount(wd2Txt) < 8}
-                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
-                      >
-                        SUBMIT PROMPT
-                      </button>
-                    ) : (
-                      <div className="flex gap-2.5 mt-3">
-                        <button
-                          onClick={() => setWeDoTask(1)}
-                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
-                        >
-                          ← PREVIOUS TASK
-                        </button>
-                        <button
-                          onClick={() => setWeDoTask(3)}
-                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          NEXT TASK →
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Task 3: Complaint */}
-                {weDoTask === 3 && (
-                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">TASK 3 OF 3</span>
-                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">+50 XP</span>
-                    </div>
-                    <h4 className="font-semibold text-[17px] text-white mb-2">Customer Complaint Response Prompt</h4>
-                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
-                      Apply a framework to write a prompt that generates a professional, empathetic reply to a late delivery complaint. The &quot;Apply to this task&quot; section in the framework card above shows exactly what to include.
-                    </p>
-
-                    {isReviewMode && savedAnswers?.wd3Txt && (
-                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.wd3Txt} />
-                    )}
-
-                    <textarea
-                      value={wd3Txt}
-                      onChange={(e) => setWd3Txt(e.target.value)}
-                      placeholder="Use RISEN for complex, multi-step responses. Use CRAFT or CO-STAR for tone-focused briefs. Your choice..."
-                      className={cn(
-                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
-                        isReviewMode && "opacity-75"
-                      )}
-                      readOnly={isReviewMode}
-                    />
-                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
-                      <span className={cn(
-                        "font-mono text-[10px]",
-                        wordCount(wd3Txt) >= 40 ? "text-[#2DD36F]" : "text-[#3D5870]"
-                      )}>
-                        {wordCount(wd3Txt)} words
-                      </span>
-                      <span className="font-mono text-[10px] text-[#3D5870]">AIM FOR 40+ WORDS</span>
-                    </div>
-
-                    {wd3Score && !isReviewMode ? (
-                      <>
-                        <ScoreGrid criteria={wd3Score} />
-                        {wd3Score.filter(c => !c.p).length > 0 && wd3Score.filter(c => c.p).length < 4 && (
-                          <MissBox
-                            missed={wd3Score.filter(c => !c.p)}
-                            hints={{
-                              'Customer context': 'Describe the situation: a customer complained about a late delivery',
-                              'Empathy/tone': 'Specify: empathetic, apologetic, or professional tone',
-                              'Response format': 'Clarify: this is an email reply — tell it the format explicitly',
-                              'Brand voice': "Reference Velara's tone — sophisticated, warm, never corporate",
-                              'Sufficient detail': "Use a framework's full structure — more detail gives better output",
-                            }}
-                          />
-                        )}
-                        {wd3Score.filter(c => c.p).length < 4 && (
-                          <Scaffold task="wd3" activeFW={activeFW} onBuild={handleWd3Scaffold} />
-                        )}
-                        <XPBurst amount={xpForScore(wd3Score.filter(c => c.p).length, wd3Score.length, 50)} label="WE DO COMPLETE" />
-                        {!wd3Done && (
-                          <button
-                            onClick={() => { setWd3Done(true); setEngageStage('youDo'); }}
-                            className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                          >
-                            PROCEED TO YOU DO →
-                          </button>
-                        )}
-                      </>
-                    ) : !isReviewMode ? (
-                      <button
-                        onClick={handleWd3Submit}
-                        disabled={wordCount(wd3Txt) < 8}
-                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
-                      >
-                        SUBMIT PROMPT
-                      </button>
-                    ) : (
-                      <div className="flex gap-2.5 mt-3">
-                        <button
-                          onClick={() => setWeDoTask(2)}
-                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
-                        >
-                          ← PREVIOUS TASK
-                        </button>
-                        <button
-                          onClick={() => setEngageStage('youDo')}
-                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          NEXT SECTION →
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* YOU DO */}
-            {engageStage === 'youDo' && (
-              <div>
-                {/* Back Button */}
-                <BackButton onClick={() => setEngageStage('weDo')} label="Back to We Do" />
-                
-                {/* Step Dots */}
-                <div className="flex gap-1.5 mb-5">
-                  {[1, 2, 3].map(i => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        if (i <= youDoTask || isReviewMode) {
-                          setYouDoTask(i);
-                        }
-                      }}
-                      disabled={i > youDoTask && !isReviewMode}
-                      className={cn(
-                        "flex-1 h-1.5 rounded transition-all",
-                        i < youDoTask && "bg-[#2DD36F]",
-                        i === youDoTask && "bg-[#C9A84C]",
-                        i > youDoTask && !isReviewMode && "bg-[#1C3348] cursor-not-allowed",
-                        i > youDoTask && isReviewMode && "bg-[#2DD36F] cursor-pointer"
-                      )}
-                    />
-                  ))}
-                </div>
-
-                <h3 className="font-semibold text-[18px] text-white mb-1">You Do — Solo Challenges</h3>
-                <p className="text-[13px] text-[#7A9AB5] mb-5">Three real Velara briefs. No guided hints this time — apply the frameworks independently.</p>
-
-                {/* Challenge 1 */}
-                {youDoTask === 1 && (
-                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">CHALLENGE 1 OF 3</span>
-                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(45,211,111,0.1)] text-[#2DD36F] border border-[rgba(45,211,111,0.25)] tracking-wider">EASY</span>
-                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">100 XP</span>
-                    </div>
-                    <h4 className="font-semibold text-[17px] text-white mb-2">The Midnight Edit — Product Description</h4>
-                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
-                      Velara is launching a sustainable evening wear collection called The Midnight Edit. Write a prompt that produces a 150-word product description in Velara&apos;s brand voice: sophisticated, sustainable, and British.
-                    </p>
-
-                    {isReviewMode && savedAnswers?.yd1Txt && (
-                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.yd1Txt} />
-                    )}
-
-                    <textarea
-                      value={yd1Txt}
-                      onChange={(e) => setYd1Txt(e.target.value)}
-                      placeholder="Act as... Velara's Midnight Edit collection... 150-word description... brand voice: sophisticated, sustainable, British..."
-                      className={cn(
-                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
-                        isReviewMode && "opacity-75"
-                      )}
-                      readOnly={isReviewMode}
-                    />
-                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
-                      <span className={cn(
-                        "font-mono text-[10px]",
-                        wordCount(yd1Txt) >= 15 ? "text-[#2DD36F]" : "text-[#3D5870]"
-                      )}>
-                        {wordCount(yd1Txt)} words
-                      </span>
-                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 15 WORDS</span>
-                    </div>
-
-                    {yd1Score && !isReviewMode ? (
-                      <>
-                        <ScoreGrid criteria={yd1Score} />
-                        <XPBurst amount={xpForScore(yd1Score.filter(c => c.p).length, yd1Score.length, 100)} label="CHALLENGE SCORED" />
-                        <button
-                          onClick={() => setYouDoTask(2)}
-                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          NEXT CHALLENGE →
-                        </button>
-                      </>
-                    ) : !isReviewMode ? (
-                      <button
-                        onClick={handleYd1Submit}
-                        disabled={wordCount(yd1Txt) < 6}
-                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
-                      >
-                        SUBMIT CHALLENGE
-                      </button>
-                    ) : (
-                      <div className="flex gap-2.5 mt-3">
-                        <button
-                          onClick={() => setEngageStage('weDo')}
-                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
-                        >
-                          ← WE DO
-                        </button>
-                        <button
-                          onClick={() => setYouDoTask(2)}
-                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          NEXT CHALLENGE →
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Challenge 2 */}
-                {youDoTask === 2 && (
-                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">CHALLENGE 2 OF 3</span>
-                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(245,158,11,0.1)] text-[#F59E0B] border border-[rgba(245,158,11,0.25)] tracking-wider">MEDIUM</span>
-                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">150 XP</span>
-                    </div>
-                    <h4 className="font-semibold text-[17px] text-white mb-2">Monday Caption Machine</h4>
-                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
-                      Velara&apos;s social media team needs 5 Instagram captions every Monday morning. Write one prompt that generates all 5. Each caption: under 150 characters, one relevant emoji, branded hashtag.
-                    </p>
-
-                    {isReviewMode && savedAnswers?.yd2Txt && (
-                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.yd2Txt} />
-                    )}
-
-                    <textarea
-                      value={yd2Txt}
-                      onChange={(e) => setYd2Txt(e.target.value)}
-                      placeholder="Specify: how many captions, character limit, emoji rule, hashtag requirement, brand voice..."
-                      className={cn(
-                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
-                        isReviewMode && "opacity-75"
-                      )}
-                      readOnly={isReviewMode}
-                    />
-                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
-                      <span className={cn(
-                        "font-mono text-[10px]",
-                        wordCount(yd2Txt) >= 40 ? "text-[#2DD36F]" : "text-[#3D5870]"
-                      )}>
-                        {wordCount(yd2Txt)} words
-                      </span>
-                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 40 WORDS</span>
-                    </div>
-
-                    {yd2Score && !isReviewMode ? (
-                      <>
-                        <ScoreGrid criteria={yd2Score} />
-                        <XPBurst amount={xpForScore(yd2Score.filter(c => c.p).length, yd2Score.length, 150)} label="CHALLENGE SCORED" />
-                        <button
-                          onClick={() => setYouDoTask(3)}
-                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          FINAL CHALLENGE →
-                        </button>
-                      </>
-                    ) : !isReviewMode ? (
-                      <button
-                        onClick={handleYd2Submit}
-                        disabled={wordCount(yd2Txt) < 16}
-                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
-                      >
-                        SUBMIT CHALLENGE
-                      </button>
-                    ) : (
-                      <div className="flex gap-2.5 mt-3">
-                        <button
-                          onClick={() => setYouDoTask(1)}
-                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
-                        >
-                          ← PREVIOUS
-                        </button>
-                        <button
-                          onClick={() => setYouDoTask(3)}
-                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          FINAL CHALLENGE →
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Challenge 3 */}
-                {youDoTask === 3 && (
-                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">CHALLENGE 3 OF 3</span>
-                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(239,68,68,0.1)] text-[#EF4444] border border-[rgba(239,68,68,0.25)] tracking-wider">HARD</span>
-                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">200 XP</span>
-                    </div>
-                    <h4 className="font-semibold text-[17px] text-white mb-2">The Complaint That Keeps Coming Back</h4>
-                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
-                      Velara receives 30 identical late delivery complaints every week. Write a prompt that generates a response that is: empathetic, offers a 10% discount code, maintains Velara&apos;s sophisticated voice, and does not sound like a template.
-                    </p>
-
-                    {isReviewMode && savedAnswers?.yd3Txt && (
-                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.yd3Txt} />
-                    )}
-
-                    <textarea
-                      value={yd3Txt}
-                      onChange={(e) => setYd3Txt(e.target.value)}
-                      placeholder="This is the hard one. How do you prompt for 'sounds personal, not template'? Use RISEN for step-by-step control."
-                      className={cn(
-                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
-                        isReviewMode && "opacity-75"
-                      )}
-                      readOnly={isReviewMode}
-                    />
-                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
-                      <span className={cn(
-                        "font-mono text-[10px]",
-                        wordCount(yd3Txt) >= 50 ? "text-[#2DD36F]" : "text-[#3D5870]"
-                      )}>
-                        {wordCount(yd3Txt)} words
-                      </span>
-                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 50 WORDS</span>
-                    </div>
-
-                    {yd3Score && !isReviewMode ? (
-                      <>
-                        <ScoreGrid criteria={yd3Score} />
-                        <XPBurst amount={xpForScore(yd3Score.filter(c => c.p).length, yd3Score.length, 200)} label="CHALLENGE SCORED" />
-                        <button
-                          onClick={() => setEngageStage('final')}
-                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          PROCEED TO FINAL CHALLENGE →
-                        </button>
-                      </>
-                    ) : !isReviewMode ? (
-                      <button
-                        onClick={handleYd3Submit}
-                        disabled={wordCount(yd3Txt) < 20}
-                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
-                      >
-                        SUBMIT CHALLENGE
-                      </button>
-                    ) : (
-                      <div className="flex gap-2.5 mt-3">
-                        <button
-                          onClick={() => setYouDoTask(2)}
-                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
-                        >
-                          ← PREVIOUS
-                        </button>
-                        <button
-                          onClick={() => setEngageStage('final')}
-                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          FINAL CHALLENGE →
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* FINAL CHALLENGE */}
-            {engageStage === 'final' && (
-              <div>
-                {/* Back Button */}
-                <BackButton onClick={() => setEngageStage('youDo')} label="Back to You Do" />
-                
-                <h3 className="font-semibold text-[18px] text-white mb-1">Final Challenge</h3>
-                <p className="text-[13px] text-[#7A9AB5] mb-5">Sarah Chen just forwarded you this from her PA. This is the last brief before you close the case.</p>
-
-                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">FINAL MISSION</span>
-                    <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">+250 XP</span>
-                  </div>
-                  <h4 className="font-semibold text-[17px] text-white mb-2">Board-Level Email — Rewrite &amp; Explain</h4>
-
-                  {/* Context - What happened */}
-                  <div className="bg-[rgba(239,68,68,0.04)] border border-[rgba(239,68,68,0.15)] rounded p-4 mb-4">
-                    <p className="font-mono text-[9px] font-bold text-[#EF9E9E] tracking-widest uppercase mb-2">📨 WHAT HAPPENED</p>
-                    <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
-                      Sarah Chen&apos;s PA sent this prompt to ChatGPT on Monday morning, hoping for a professional weekly sales update email for the board of directors. Here&apos;s what they typed:
-                    </p>
-                    <div className="bg-[#08131E] border border-[#1C3348] rounded p-3.5 px-4 font-mono text-[15px] text-white text-center mb-3">
-                      &quot;Write email&quot;
-                    </div>
-                    <p className="text-[12px] text-[#7A9AB5] leading-relaxed">
-                      <strong className="text-[#EF9E9E]">The result?</strong> ChatGPT produced a generic, one-sentence placeholder with no context about Velara, no sales data, no board-level formatting, and no brand voice. Sarah was embarrassed when she had to manually rewrite it before the 9 AM meeting.
-                    </p>
-                  </div>
-
-                  {/* What went wrong */}
-                  <div className="bg-[rgba(201,168,76,0.05)] border border-[rgba(201,168,76,0.15)] rounded p-4 mb-4">
-                    <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">🔍 WHAT WENT WRONG</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { label: 'NO ROLE', desc: 'AI didn\'t know who to be' },
-                        { label: 'NO AUDIENCE', desc: 'Who is this email for?' },
-                        { label: 'NO CONTEXT', desc: 'What is Velara? What industry?' },
-                        { label: 'NO PURPOSE', desc: 'Sales update? Crisis? Celebration?' },
-                        { label: 'NO FORMAT', desc: 'How should it be structured?' },
-                        { label: 'NO TONE', desc: 'Professional? Casual? Urgent?' },
-                      ].map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-2 p-2 bg-[#08131E] rounded border border-[#1C3348]">
-                          <span className="font-mono text-[9px] font-bold text-[#EF9E9E] tracking-wider">{item.label}</span>
-                          <span className="text-[11px] text-[#7A9AB5]">{item.desc}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Part 1 */}
-                  <div className="border-t border-[#1C3348] pt-4 mt-4">
-                    <p className="font-mono text-[10px] font-bold text-[#7A9AB5] tracking-widest uppercase mb-2">PART 1: Write the Improved Prompt</p>
-                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-3">
-                      Write a prompt that will produce a professional weekly sales update email for Velara&apos;s Board of Directors. Apply one of the three frameworks you learned. The email should include: a subject line, 3-bullet summary of key metrics, one notable highlight, and one strategic recommendation.
-                    </p>
-                    
-                    {isReviewMode && savedAnswers?.fp && (
-                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.fp} />
-                    )}
-
-                    <textarea
-                      value={fp}
-                      onChange={(e) => setFp(e.target.value)}
-                      placeholder="Apply CRAFT, CO-STAR, or RISEN — structure your prompt to address all six missing elements..."
-                      className={cn(
-                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
-                        isReviewMode && "opacity-75"
-                      )}
-                      readOnly={isReviewMode}
-                    />
-                    <div className="flex items-center justify-between mt-1.5 mb-4">
-                      <span className={cn(
-                        "font-mono text-[10px]",
-                        wordCount(fp) >= 35 ? "text-[#2DD36F]" : "text-[#3D5870]"
-                      )}>
-                        {wordCount(fp)} words
-                      </span>
-                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 35 WORDS</span>
-                    </div>
-                  </div>
-
-                  {/* Part 2 */}
-                  <div className="border-t border-[#1C3348] pt-4 mt-4">
-                    <p className="font-mono text-[10px] font-bold text-[#7A9AB5] tracking-widest uppercase mb-2">PART 2: Explain Your Improvement</p>
-                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-3">
-                      In 2–3 sentences, explain what was wrong with the original prompt and how your version fixes each problem.
-                    </p>
-                    
-                    {isReviewMode && savedAnswers?.fe && (
-                      <SavedAnswerDisplay label="Your Previous Explanation" answer={savedAnswers.fe} />
-                    )}
-
-                    <textarea
-                      value={fe}
-                      onChange={(e) => setFe(e.target.value)}
-                      placeholder="The original prompt failed because... My improved version addresses this by..."
-                      className={cn(
-                        "w-full min-h-[80px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
-                        isReviewMode && "opacity-75"
-                      )}
-                      readOnly={isReviewMode}
-                    />
-                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
-                      <span className={cn(
-                        "font-mono text-[10px]",
-                        wordCount(fe) >= 25 ? "text-[#2DD36F]" : "text-[#3D5870]"
-                      )}>
-                        {wordCount(fe)} words
-                      </span>
-                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 25 WORDS</span>
-                    </div>
-                  </div>
-
-                  {fScore && !isReviewMode ? (
-                    <>
-                      <ScoreGrid criteria={fScore} />
-                      <XPBurst amount={xpForScore(fScore.filter(c => c.p).length, fScore.length, 250)} label="MISSION COMPLETE" />
-                      {!fDone && (
-                        <button
-                          onClick={() => setPhase('consolidate')}
-                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                        >
-                          COMPLETE MODULE →
-                        </button>
-                      )}
-                    </>
-                  ) : !isReviewMode ? (
-                    <button
-                      onClick={handleFinalSubmit}
-                      disabled={wordCount(fp) < 15 || wordCount(fe) < 10}
-                      className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
-                    >
-                      SUBMIT FINAL CHALLENGE
-                    </button>
-                  ) : (
-                    <div className="flex gap-2.5 mt-3">
-                      <button
-                        onClick={() => setEngageStage('youDo')}
-                        className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
-                      >
-                        ← YOU DO
-                      </button>
-                      <button
-                        onClick={() => setPhase('consolidate')}
-                        className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
-                      >
-                        VIEW SUMMARY →
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* CONSOLIDATE PHASE */}
-        {phase === 'consolidate' && (
-          <div className="animate-fade-in">
-            {/* Back Button */}
-            {isReviewMode && (
-              <BackButton onClick={() => setPhase('engage')} label="Back to Engage" />
-            )}
-            
-            <div className="text-center">
-              {/* Badge */}
-              <div className="mb-6">
-                <div className="w-[110px] h-[110px] mx-auto rounded-full flex items-center justify-center text-5xl bg-[conic-gradient(#C9A84C,#E8C96A,#C9A84C)] shadow-[0_0_0_8px_rgba(201,168,76,0.1),0_0_40px_rgba(201,168,76,0.25)] animate-pulse">
-                  🏅
-                </div>
-                <span className="inline-block mt-4 bg-[rgba(201,168,76,0.12)] border border-[rgba(201,168,76,0.4)] text-[#C9A84C] font-mono text-[11px] font-bold px-4 py-1.5 rounded tracking-widest">
-                  PROMPT SPECIALIST
-                </span>
-              </div>
-
-              <h2 className="font-bold text-[26px] text-white mb-1">Mission Accomplished</h2>
-              <p className="text-[13px] text-[#7A9AB5] mb-5">Module 01 — Prompt Engineering — Complete</p>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-2.5 max-w-md mx-auto mb-5">
-                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 text-center">
-                  <p className="font-mono text-[26px] font-bold text-[#C9A84C]">{savedAnswers?.moduleXP || moduleXP}</p>
-                  <p className="font-mono text-[9px] text-[#3D5870] tracking-widest uppercase mt-1">XP This Module</p>
-                </div>
-                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 text-center">
-                  <p className="font-mono text-[26px] font-bold text-white">{progress.totalXP}</p>
-                  <p className="font-mono text-[9px] text-[#3D5870] tracking-widest uppercase mt-1">Total XP</p>
-                </div>
-              </div>
-
-              {/* Your Answers Summary */}
-              {isReviewMode && savedAnswers && (
-                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5 mb-5 text-left">
-                  <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest uppercase mb-4">📝 YOUR SAVED ANSWERS</p>
-                  
-                  <div className="space-y-4">
-                    {savedAnswers.wd2Txt && (
-                      <div>
-                        <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-1">WE DO - INSTAGRAM PROMPT</p>
-                        <p className="text-[12px] text-[#9DBBD4] leading-relaxed line-clamp-2">{savedAnswers.wd2Txt}</p>
-                      </div>
-                    )}
-                    {savedAnswers.wd3Txt && (
-                      <div>
-                        <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-1">WE DO - COMPLAINT PROMPT</p>
-                        <p className="text-[12px] text-[#9DBBD4] leading-relaxed line-clamp-2">{savedAnswers.wd3Txt}</p>
-                      </div>
-                    )}
-                    {savedAnswers.fp && (
-                      <div>
-                        <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-1">FINAL - BOARD EMAIL PROMPT</p>
-                        <p className="text-[12px] text-[#9DBBD4] leading-relaxed line-clamp-2">{savedAnswers.fp}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Academic Insight */}
-              <div className="bg-[#112030] border border-[#1C3348] border-l-[3px] border-l-[#C9A84C] rounded-r-lg p-4.5 px-5 mb-3 text-left">
-                <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📚 Academic Debrief</p>
-                <p className="text-[12px] text-[#7A9AB5] leading-relaxed">
-                  Kaplan and Haenlein (2019) define AI as systems that simulate human cognitive functions such as learning and problem-solving. The frameworks you used in this module — CRAFT, CO-STAR, RISEN — are structural tools for directing those cognitive functions deliberately. Role, context, format, goal, and detail are what separate useful AI output from generic noise.
-                </p>
-              </div>
-
-              {/* Industry Application */}
-              <div className="bg-[rgba(45,211,111,0.04)] border border-[rgba(45,211,111,0.2)] rounded-lg p-4.5 px-5 mb-3 text-left">
-                <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-2">💼 Industry Application</p>
-                <p className="text-[12px] text-[#9DBBD4] leading-relaxed">
-                  In your future career, you&apos;ll use these frameworks daily: marketing teams use CRAFT for campaign copy, legal teams use RISEN for contract analysis, and executive assistants use CO-STAR for stakeholder communications. The ability to structure AI prompts effectively is now a core professional skill across every industry.
-                </p>
-              </div>
-
-              {/* Ethics Checkpoint */}
-              <div className="bg-[rgba(239,68,68,0.04)] border border-[rgba(239,68,68,0.2)] rounded-lg p-4.5 px-5 mb-5 text-left">
-                <p className="font-mono text-[9px] font-bold text-[#EF9E9E] tracking-widest uppercase mb-2">⚖️ Ethics Checkpoint</p>
-                <p className="text-[12px] text-[#9DBBD4] leading-relaxed">
-                  Before Velara deploys AI-generated content publicly — what are their disclosure obligations? Consider the ASA guidelines on AI-generated advertising and ULaw&apos;s AI Policy (2023). How might transparency requirements affect their marketing strategy?
-                </p>
-              </div>
-
-              {/* Navigation Buttons */}
-              <div className="flex gap-2.5">
-                <button
-                  onClick={() => router.push('/course2')}
-                  className="flex-1 px-6 py-3 border border-[#C9A84C] text-[#C9A84C] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[rgba(201,168,76,0.12)] transition-all"
-                >
-                  ← BACK TO COURSE
-                </button>
                 <button
                   onClick={() => {
-                    setIsReviewMode(true);
-                    setEngageStage('iDo');
-                    setPhase('engage');
+                    if (wd1Sel.length === 4) {
+                      setWd1Done(true);
+                      addXP(15);
+                      setModuleXP(prev => prev + 15);
+                      setWeDoTask(2);
+                    }
                   }}
-                  className="flex-1 px-6 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+                  disabled={wd1Sel.length < 4}
+                  className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
                 >
-                  REVIEW MODULE →
+                  {wd1Sel.length < 4 ? 'SELECT ALL MISSING ELEMENTS' : 'CONTINUE TO TASK 2 →'}
                 </button>
               </div>
+            )}
 
-              {!progress.course2ModulesCompleted.includes(2) && !isReviewMode && (
-                <p className="text-[#2DD36F] text-sm mt-4">✅ Module 2 is now unlocked!</p>
-              )}
+            {/* Task 2: Write Instagram Caption Prompt */}
+            {weDoTask === 2 && (
+              <div>
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">TASK 2: WRITE AN INSTAGRAM PROMPT</p>
+                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                    Using a framework of your choice, write a prompt for Velara&apos;s Instagram caption. Focus on the new Summer Solstice collection.
+                  </p>
+                  <p className="text-[12px] text-[#7A9AB5] mb-3">
+                    Your prompt should address: role, context, action, format, and tone. Aim for at least 30 words.
+                  </p>
+                </div>
+
+                <FrameworkCard 
+                  activeFW={activeFW} 
+                  setActiveFW={setActiveFW} 
+                  isOpen={fwOpen} 
+                  setIsOpen={setFwOpen} 
+                  taskKey="wd2"
+                  showBeforeAfter={true}
+                />
+
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <textarea
+                    value={wd2Txt}
+                    onChange={(e) => setWd2Txt(e.target.value)}
+                    placeholder="Write your structured prompt here..."
+                    className="w-full h-32 p-3 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] transition-colors resize-none placeholder:text-[#3D5870]"
+                  />
+                  <p className="text-[10px] text-[#3D5870] mt-2 font-mono">Word count: {wordCount(wd2Txt)}</p>
+                </div>
+
+                {/* Submit button */}
+                {!wd2Score && (
+                  <button
+                    onClick={handleWd2Submit}
+                    disabled={wordCount(wd2Txt) < 15}
+                    className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                  >
+                    SUBMIT FOR FEEDBACK
+                  </button>
+                )}
+
+                {/* Score Display */}
+                {wd2Score && (
+                  <>
+                    <ScoreGrid criteria={wd2Score} />
+                    {wd2Score.filter(c => c.p).length < 4 && (
+                      <>
+                        <MissBox
+                          missed={wd2Score.filter(c => !c.p)}
+                          hints={{
+                            'Role assigned': 'Try: "Act as a social media copywriter" or "You are Velara\'s Instagram manager"',
+                            'Platform context': 'Mention Instagram, social media, or the platform you\'re creating for',
+                            'Brand reference': 'Include "Velara", "sustainable", "luxury", or "fashion"',
+                            'Format specified': 'Specify the output: "caption under 150 characters", "with emoji", "include hashtag"',
+                            'Sufficient detail': 'Add more context and instructions — aim for 30+ words',
+                          }}
+                        />
+                        <Scaffold task="wd2" activeFW={activeFW} onBuild={handleWd2Scaffold} />
+                      </>
+                    )}
+                    <button
+                      onClick={() => {
+                        setWd2Done(true);
+                        setWeDoTask(3);
+                      }}
+                      className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+                    >
+                      CONTINUE TO TASK 3 →
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Task 3: Customer Service Response */}
+            {weDoTask === 3 && (
+              <div>
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">TASK 3: CUSTOMER SERVICE PROMPT</p>
+                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                    A Velara customer has complained that their order arrived two weeks late. They paid for express delivery. Write a prompt that will generate a professional, empathetic response email.
+                  </p>
+                  <p className="text-[12px] text-[#7A9AB5] mb-3">
+                    Consider: How would you structure this to sound genuine rather than templated? Aim for 40+ words.
+                  </p>
+                </div>
+
+                <FrameworkCard 
+                  activeFW={activeFW} 
+                  setActiveFW={setActiveFW} 
+                  isOpen={fwOpen} 
+                  setIsOpen={setFwOpen} 
+                  taskKey="wd3"
+                  showBeforeAfter={true}
+                />
+
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <textarea
+                    value={wd3Txt}
+                    onChange={(e) => setWd3Txt(e.target.value)}
+                    placeholder="Write your customer service prompt here..."
+                    className="w-full h-32 p-3 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] transition-colors resize-none placeholder:text-[#3D5870]"
+                  />
+                  <p className="text-[10px] text-[#3D5870] mt-2 font-mono">Word count: {wordCount(wd3Txt)}</p>
+                </div>
+
+                {!wd3Score && (
+                  <button
+                    onClick={handleWd3Submit}
+                    disabled={wordCount(wd3Txt) < 20}
+                    className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                  >
+                    SUBMIT FOR FEEDBACK
+                  </button>
+                )}
+
+                {wd3Score && (
+                  <>
+                    <ScoreGrid criteria={wd3Score} />
+                    {wd3Score.filter(c => c.p).length < 4 && (
+                      <>
+                        <MissBox
+                          missed={wd3Score.filter(c => !c.p)}
+                          hints={{
+                            'Customer context': 'Reference the late delivery, the complaint, or the express delivery issue',
+                            'Empathy/tone': 'Use words like "empathetic", "sincere apology", "genuinely sorry"',
+                            'Response format': 'Specify "email reply", "response email", or format details',
+                            'Brand voice': 'Reference Velara\'s sophisticated, caring brand voice',
+                            'Sufficient detail': 'Expand your prompt with more specific instructions — aim for 40+ words',
+                          }}
+                        />
+                        <Scaffold task="wd3" activeFW={activeFW} onBuild={handleWd3Scaffold} />
+                      </>
+                    )}
+                    <button
+                      onClick={() => setEngageStage('youDo')}
+                      className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+                    >
+                      CONTINUE TO YOU DO →
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // You Do Stage
+    if (engageStage === 'youDo') {
+      return (
+        <div className="min-h-screen bg-[#08131E]">
+          <div className="px-5 py-4 border-b border-[#1C3348]">
+            <BackButton onClick={() => setEngageStage('weDo')} label="Back to We Do" />
+            <h1 className="font-mono text-[22px] font-bold text-white tracking-tight">YOU DO — Independent Practice</h1>
+            <p className="text-[12px] text-[#7A9AB5] mt-1">Apply what you&apos;ve learned with three independent tasks</p>
+          </div>
+          <ProgressBar phase={phase} prepareProgress={prepareProgress} engageStage={engageStage} weDoTask={weDoTask} youDoTask={youDoTask} />
+
+          <div className="p-5">
+            {/* Task navigation */}
+            <div className="flex gap-1.5 mb-4">
+              {[1, 2, 3].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setYouDoTask(t)}
+                  className={cn(
+                    "flex-1 py-2 rounded font-mono text-[10px] font-bold tracking-wider uppercase border transition-all",
+                    youDoTask === t
+                      ? "bg-[rgba(201,168,76,0.12)] border-[#C9A84C] text-[#C9A84C]"
+                      : "border-[#1C3348] text-[#3D5870] hover:border-[rgba(201,168,76,0.4)]"
+                  )}
+                >
+                  Task {t}
+                </button>
+              ))}
+            </div>
+
+            {/* You Do Task 1: Product Email */}
+            {youDoTask === 1 && (
+              <div>
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">TASK 1: PRODUCT LAUNCH EMAIL</p>
+                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                    Velara is launching a new Winter Essentials collection. Write a prompt that will generate an email to existing customers announcing the launch with a 15% early-access discount.
+                  </p>
+                  <p className="text-[12px] text-[#7A9AB5] mb-3">
+                    Consider: subject line, email structure, call to action. Aim for 35+ words in your prompt.
+                  </p>
+                </div>
+
+                <FrameworkCard 
+                  activeFW={activeFW} 
+                  setActiveFW={setActiveFW} 
+                  isOpen={fwOpen} 
+                  setIsOpen={setFwOpen} 
+                  taskKey="wd2"
+                  showBeforeAfter={false}
+                />
+
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <textarea
+                    value={yd1Txt}
+                    onChange={(e) => setYd1Txt(e.target.value)}
+                    placeholder="Write your product launch email prompt here..."
+                    className="w-full h-32 p-3 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] transition-colors resize-none placeholder:text-[#3D5870]"
+                  />
+                  <p className="text-[10px] text-[#3D5870] mt-2 font-mono">Word count: {wordCount(yd1Txt)}</p>
+                </div>
+
+                {!yd1Score && (
+                  <button
+                    onClick={handleYd1Submit}
+                    disabled={wordCount(yd1Txt) < 15}
+                    className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                  >
+                    SUBMIT FOR FEEDBACK
+                  </button>
+                )}
+
+                {yd1Score && (
+                  <>
+                    <ScoreGrid criteria={yd1Score} />
+                    <button
+                      onClick={() => setYouDoTask(2)}
+                      className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+                    >
+                      CONTINUE TO TASK 2 →
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* You Do Task 2: Board Update */}
+            {youDoTask === 2 && (
+              <div>
+                <BackButton onClick={() => setYouDoTask(1)} label="Back to Task 1" />
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">TASK 2: BOARD UPDATE EMAIL</p>
+                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                    Write a prompt to generate a weekly sales performance email for Velara&apos;s Board of Directors. The email should summarise key metrics, highlight one success, and flag one concern.
+                  </p>
+                  <p className="text-[12px] text-[#7A9AB5] mb-3">
+                    Consider: executive summary style, data presentation, clear recommendations. Aim for 40+ words.
+                  </p>
+                </div>
+
+                <FrameworkCard 
+                  activeFW={activeFW} 
+                  setActiveFW={setActiveFW} 
+                  isOpen={fwOpen} 
+                  setIsOpen={setFwOpen} 
+                  taskKey="wd3"
+                  showBeforeAfter={false}
+                />
+
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <textarea
+                    value={yd2Txt}
+                    onChange={(e) => setYd2Txt(e.target.value)}
+                    placeholder="Write your board update prompt here..."
+                    className="w-full h-32 p-3 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] transition-colors resize-none placeholder:text-[#3D5870]"
+                  />
+                  <p className="text-[10px] text-[#3D5870] mt-2 font-mono">Word count: {wordCount(yd2Txt)}</p>
+                </div>
+
+                {!yd2Score && (
+                  <button
+                    onClick={handleYd2Submit}
+                    disabled={wordCount(yd2Txt) < 20}
+                    className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                  >
+                    SUBMIT FOR FEEDBACK
+                  </button>
+                )}
+
+                {yd2Score && (
+                  <>
+                    <ScoreGrid criteria={yd2Score} />
+                    <button
+                      onClick={() => setYouDoTask(3)}
+                      className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+                    >
+                      CONTINUE TO TASK 3 →
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* You Do Task 3: Complex Scenario */}
+            {youDoTask === 3 && (
+              <div>
+                <BackButton onClick={() => setYouDoTask(2)} label="Back to Task 2" />
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">TASK 3: COMPLEX SCENARIO</p>
+                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                    A customer has complained on social media that Velara&apos;s sizing is inconsistent and they&apos;ve received wrong sizes twice. Write a prompt to generate a response that addresses the complaint professionally and offers a concrete solution.
+                  </p>
+                  <p className="text-[12px] text-[#7A9AB5] mb-3">
+                    Consider: public response nature, brand reputation, specific resolution steps. Aim for 45+ words.
+                  </p>
+                </div>
+
+                <FrameworkCard 
+                  activeFW={activeFW} 
+                  setActiveFW={setActiveFW} 
+                  isOpen={fwOpen} 
+                  setIsOpen={setFwOpen} 
+                  taskKey="wd3"
+                  showBeforeAfter={false}
+                />
+
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+                  <textarea
+                    value={yd3Txt}
+                    onChange={(e) => setYd3Txt(e.target.value)}
+                    placeholder="Write your complex scenario prompt here..."
+                    className="w-full h-32 p-3 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] transition-colors resize-none placeholder:text-[#3D5870]"
+                  />
+                  <p className="text-[10px] text-[#3D5870] mt-2 font-mono">Word count: {wordCount(yd3Txt)}</p>
+                </div>
+
+                {!yd3Score && (
+                  <button
+                    onClick={handleYd3Submit}
+                    disabled={wordCount(yd3Txt) < 25}
+                    className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                  >
+                    SUBMIT FOR FEEDBACK
+                  </button>
+                )}
+
+                {yd3Score && (
+                  <>
+                    <ScoreGrid criteria={yd3Score} />
+                    <button
+                      onClick={() => setEngageStage('final')}
+                      className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+                    >
+                      CONTINUE TO FINAL CHALLENGE →
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Final Stage
+    if (engageStage === 'final') {
+      return (
+        <div className="min-h-screen bg-[#08131E]">
+          <div className="px-5 py-4 border-b border-[#1C3348]">
+            <BackButton onClick={() => setEngageStage('youDo')} label="Back to You Do" />
+            <h1 className="font-mono text-[22px] font-bold text-white tracking-tight">FINAL CHALLENGE</h1>
+            <p className="text-[12px] text-[#7A9AB5] mt-1">Apply everything you&apos;ve learned to complete the mission</p>
+          </div>
+          <ProgressBar phase={phase} prepareProgress={prepareProgress} engageStage={engageStage} weDoTask={weDoTask} youDoTask={youDoTask} />
+
+          <div className="p-5">
+            {/* What Happened */}
+            <div className="bg-[rgba(201,168,76,0.08)] border border-[rgba(201,168,76,0.25)] rounded-lg p-4 mb-4">
+              <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">📋 WHAT HAPPENED</p>
+              <p className="text-[13px] text-[#9DBBD4] leading-relaxed">
+                After reviewing the team&apos;s AI-generated content, Velara&apos;s Managing Director has asked you to demonstrate proper prompting technique. She wants to see how a well-structured prompt improves output quality.
+              </p>
+            </div>
+
+            {/* What Went Wrong */}
+            <div className="bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.2)] rounded-lg p-4 mb-4">
+              <p className="font-mono text-[10px] font-bold text-[#EF4444] tracking-widest uppercase mb-3">❌ WHAT WENT WRONG</p>
+              <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                The MD showed you 6 recent prompts from the team. All of them were missing key elements:
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {['No role assigned', 'No context provided', 'No format specified', 'No tone guidance', 'No clear objective', 'No constraints set'].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2 bg-[#08131E] rounded border border-[rgba(239,68,68,0.15)]">
+                    <span className="text-[#EF4444] text-[12px]">✗</span>
+                    <span className="text-[11px] text-[#7A9AB5]">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* The Task */}
+            <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+              <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">🎯 YOUR TASK</p>
+              <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                Write a prompt that the MD can use to generate a weekly sales performance email for the Board of Directors. This prompt will serve as a template the team can adapt for future communications.
+              </p>
+              <p className="text-[12px] text-[#7A9AB5] mb-3">
+                Your prompt should be comprehensive enough that any team member could use it and get quality output. Aim for 50+ words.
+              </p>
+            </div>
+
+            <FrameworkCard 
+              activeFW={activeFW} 
+              setActiveFW={setActiveFW} 
+              isOpen={fwOpen} 
+              setIsOpen={setFwOpen} 
+              taskKey="wd3"
+              showBeforeAfter={true}
+            />
+
+            <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+              <textarea
+                value={fp}
+                onChange={(e) => setFp(e.target.value)}
+                placeholder="Write your comprehensive prompt here..."
+                className="w-full h-40 p-3 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] transition-colors resize-none placeholder:text-[#3D5870]"
+              />
+              <p className="text-[10px] text-[#3D5870] mt-2 font-mono">Word count: {wordCount(fp)}</p>
+            </div>
+
+            {/* Reflection */}
+            <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+              <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">💭 REFLECTION (Optional)</p>
+              <p className="text-[12px] text-[#7A9AB5] mb-3">
+                In a few sentences, explain which framework you chose and why it works well for this task:
+              </p>
+              <textarea
+                value={fe}
+                onChange={(e) => setFe(e.target.value)}
+                placeholder="Explain your framework choice..."
+                className="w-full h-20 p-3 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] transition-colors resize-none placeholder:text-[#3D5870]"
+              />
+            </div>
+
+            {!fScore && (
+              <button
+                onClick={handleFinalSubmit}
+                disabled={wordCount(fp) < 30}
+                className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+              >
+                SUBMIT FINAL CHALLENGE
+              </button>
+            )}
+
+            {fScore && (
+              <>
+                <ScoreGrid criteria={fScore} />
+                <div className="mt-4 bg-[rgba(45,211,111,0.1)] border border-[rgba(45,211,111,0.25)] rounded-lg p-4 text-center">
+                  <XPBurst amount={moduleXP} label="Module Complete!" />
+                  <p className="text-[13px] text-[#2DD36F] mt-2">
+                    Congratulations! You&apos;ve completed Module 1: Prompt Engineering Fundamentals.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+  };
+
+  // Render Consolidate Phase (Review Mode)
+  const renderConsolidate = () => (
+    <div className="min-h-screen bg-[#08131E]">
+      <div className="px-5 py-4 border-b border-[#1C3348]">
+        <BackButton onClick={() => router.push('/course2')} label="Back to Course" />
+        <h1 className="font-mono text-[22px] font-bold text-white tracking-tight">CONSOLIDATE — Review Mode</h1>
+        <p className="text-[12px] text-[#7A9AB5] mt-1">Review your completed work and feedback</p>
+      </div>
+      <ProgressBar phase={phase} prepareProgress={100} engageStage={'final'} weDoTask={3} youDoTask={3} />
+
+      <div className="p-5">
+        {/* Module Summary */}
+        <div className="bg-[rgba(45,211,111,0.06)] border border-[rgba(45,211,111,0.2)] rounded-lg p-4 mb-4">
+          <p className="font-mono text-[10px] font-bold text-[#2DD36F] tracking-widest uppercase mb-2">✓ MODULE COMPLETED</p>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="text-center">
+              <p className="font-mono text-[24px] font-bold text-[#C9A84C]">{moduleXP}</p>
+              <p className="text-[10px] text-[#3D5870]">XP Earned</p>
+            </div>
+            <div className="text-center">
+              <p className="font-mono text-[24px] font-bold text-[#2DD36F]">✓</p>
+              <p className="text-[10px] text-[#3D5870]">Badge Earned</p>
             </div>
           </div>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="py-6 px-4 mt-12 border-t border-[#1C3348]">
-        <div className="max-w-[760px] mx-auto text-center">
-          <p className="text-[11px] text-[#3D5870]">© 2025 SwipeUp AI Society • University of Law</p>
         </div>
-      </footer>
+
+        {/* Key Learnings */}
+        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+          <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">📚 KEY LEARNINGS</p>
+          <div className="space-y-2">
+            <div className="p-2.5 bg-[#08131E] rounded border border-[#1C3348]">
+              <p className="text-[12px] text-white font-medium">Three Frameworks Mastered</p>
+              <p className="text-[11px] text-[#7A9AB5]">CRAFT, CO-STAR, and RISEN — each suited for different prompt types</p>
+            </div>
+            <div className="p-2.5 bg-[#08131E] rounded border border-[#1C3348]">
+              <p className="text-[12px] text-white font-medium">Role, Context, Format, Tone</p>
+              <p className="text-[11px] text-[#7A9AB5]">The four essential elements of effective business prompts</p>
+            </div>
+            <div className="p-2.5 bg-[#08131E] rounded border border-[#1C3348]">
+              <p className="text-[12px] text-white font-medium">Iterative Improvement</p>
+              <p className="text-[11px] text-[#7A9AB5]">Using scaffolds and feedback to refine your prompts</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Your Work with Scores */}
+        <div className="mb-4">
+          <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">📝 YOUR WORK & FEEDBACK</p>
+          
+          <SavedScoreDisplay 
+            label="WE DO TASK 2: Instagram Prompt" 
+            answer={savedAnswers?.wd2Txt || wd2Txt} 
+            score={savedAnswers?.wd2Score || wd2Score || []} 
+          />
+          
+          <SavedScoreDisplay 
+            label="WE DO TASK 3: Customer Service Prompt" 
+            answer={savedAnswers?.wd3Txt || wd3Txt} 
+            score={savedAnswers?.wd3Score || wd3Score || []} 
+          />
+          
+          <SavedScoreDisplay 
+            label="YOU DO TASK 1: Product Launch Email" 
+            answer={savedAnswers?.yd1Txt || yd1Txt} 
+            score={savedAnswers?.yd1Score || yd1Score || []} 
+          />
+          
+          <SavedScoreDisplay 
+            label="YOU DO TASK 2: Board Update" 
+            answer={savedAnswers?.yd2Txt || yd2Txt} 
+            score={savedAnswers?.yd2Score || yd2Score || []} 
+          />
+          
+          <SavedScoreDisplay 
+            label="YOU DO TASK 3: Complex Scenario" 
+            answer={savedAnswers?.yd3Txt || yd3Txt} 
+            score={savedAnswers?.yd3Score || yd3Score || []} 
+          />
+          
+          <SavedScoreDisplay 
+            label="FINAL CHALLENGE: Board Email Template" 
+            answer={savedAnswers?.fp || fp} 
+            score={savedAnswers?.fScore || fScore || []} 
+          />
+        </div>
+
+        {/* Next Steps */}
+        <div className="bg-[rgba(201,168,76,0.06)] border border-[rgba(201,168,76,0.2)] rounded-lg p-4">
+          <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">🚀 NEXT STEPS</p>
+          <p className="text-[12px] text-[#9DBBD4] leading-relaxed mb-3">
+            Ready to continue your learning journey? Module 2 will cover Advanced Prompting Techniques including chain-of-thought prompting, few-shot learning, and prompt chaining.
+          </p>
+          <button
+            onClick={() => router.push('/course2')}
+            className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+          >
+            RETURN TO COURSE →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Main render
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-[#08131E] flex items-center justify-center">
+        <p className="text-[#7A9AB5] font-mono">Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#08131E]">
+      <PhaseIndicator 
+        currentPhase={phase} 
+        onPhaseClick={setPhase} 
+        isCompleted={progress.course2ModulesCompleted.includes(1)} 
+      />
+      {phase === 'prepare' && renderPrepare()}
+      {phase === 'engage' && renderEngage()}
+      {phase === 'consolidate' && renderConsolidate()}
     </div>
   );
 }
