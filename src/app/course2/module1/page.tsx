@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 // Types
 type Phase = 'prepare' | 'engage' | 'consolidate';
 type EngageStage = 'iDo' | 'weDo' | 'youDo' | 'final';
+type FrameworkType = 'craft' | 'costar' | 'risen';
 
 interface MCQQuestion {
   id: string;
@@ -17,7 +18,7 @@ interface MCQQuestion {
   correct: number;
 }
 
-// MCQ Questions (exactly as specified)
+// MCQ Questions
 const mcqQuestions: MCQQuestion[] = [
   {
     id: 'q1',
@@ -83,37 +84,159 @@ const videos = [
   { title: 'Advanced Prompting Techniques', duration: '15 min', url: 'https://www.youtube.com/watch?v=mBYu5NdD9XU' },
 ];
 
+// We Do Task 1 Options
+const WD_OPTS = ['No role assigned to the AI', 'No output format specified', 'No brand context provided', 'No target audience mentioned'];
+
+// Frameworks Data
+const FRAMEWORKS = {
+  craft: {
+    name: 'CRAFT',
+    color: '#7C6FD4',
+    desc: 'CRAFT is a practical framework for business prompting. It ensures every prompt tells the AI who it is, what to produce, how to produce it, and in what style — reducing vague outputs dramatically.',
+    letters: [
+      { k: 'C', l: 'Context', h: 'Background information the AI needs to understand the situation' },
+      { k: 'R', l: 'Role', h: 'Who the AI should act as — e.g. "Act as a senior marketing copywriter"' },
+      { k: 'A', l: 'Action', h: 'The specific task — write, rewrite, summarise, generate, analyse' },
+      { k: 'F', l: 'Format', h: 'The shape of the output — bullet list, paragraph, email, 150 words' },
+      { k: 'T', l: 'Tone', h: 'The voice and style — professional, warm, sophisticated, concise' },
+    ],
+    example: {
+      label: 'CRAFT applied to Velara Instagram',
+      text: 'Context: Velara is a British sustainable luxury fashion brand. Role: Act as a social media copywriter. Action: Write an Instagram caption for our new summer dress. Format: Under 150 characters with one emoji. Tone: Sophisticated, warm, and aspirational.',
+    },
+  },
+  costar: {
+    name: 'CO-STAR',
+    color: '#2B9EAA',
+    desc: 'CO-STAR gives you granular control over how the AI responds. It separates the objective (what to achieve) from the audience (who it\'s for) and the response format — useful for multi-stakeholder communications.',
+    letters: [
+      { k: 'C', l: 'Context', h: 'The setting or background — brand, situation, prior events' },
+      { k: 'O', l: 'Objective', h: 'What you want to achieve — sell, inform, apologise, persuade' },
+      { k: 'S', l: 'Style', h: 'The writing style — journalistic, narrative, business formal' },
+      { k: 'T', l: 'Tone', h: 'Emotional register — empathetic, authoritative, friendly' },
+      { k: 'A', l: 'Audience', h: 'Who will read this — customers, board, press, Gen Z' },
+      { k: 'R', l: 'Response', h: 'The exact format of the output — length, structure, sections' },
+    ],
+    example: {
+      label: 'CO-STAR for the board email task',
+      text: 'Context: Velara is a fashion brand preparing its weekly update. Objective: Inform board members of sales performance. Style: Executive business writing. Tone: Confident and direct. Audience: Board of directors. Response: Structured email with subject line, 3 bullet summary, and one recommendation.',
+    },
+  },
+  risen: {
+    name: 'RISEN',
+    color: '#C9624C',
+    desc: 'RISEN is best for complex tasks that need step-by-step logic. The "Steps" and "Narrowing" elements guide the AI through a process and constrain it to avoid common failure modes like being too generic.',
+    letters: [
+      { k: 'R', l: 'Role', h: 'The persona the AI should take on for this specific task' },
+      { k: 'I', l: 'Instructions', h: 'A clear, direct instruction — what to do in one sentence' },
+      { k: 'S', l: 'Steps', h: 'A sequence the AI should follow — first do X, then do Y' },
+      { k: 'E', l: 'End goal', h: 'What a successful output looks like — the measurable outcome' },
+      { k: 'N', l: 'Narrowing', h: 'Constraints — what to avoid, what not to include, word limits' },
+    ],
+    example: {
+      label: 'RISEN for the complaint response task',
+      text: 'Role: You are a customer service specialist for Velara. Instruction: Write a reply to a late delivery complaint. Steps: 1) Open with empathy. 2) Acknowledge the delay. 3) Offer a 10% discount. 4) Close warmly. End goal: A response that retains the customer. Narrowing: Do not sound like a template. Under 150 words.',
+    },
+  },
+};
+
+// Framework apply hints per task
+const FW_APPLY: Record<string, Record<FrameworkType, string[]>> = {
+  wd2: {
+    craft: [
+      'C — Velara is a British sustainable luxury fashion brand',
+      'R — Act as a social media copywriter for Velara',
+      'A — Write an Instagram caption for [product/collection]',
+      'F — One caption, under 150 characters',
+      'T — Sophisticated and aspirational',
+    ],
+    costar: [
+      'C — Velara sustainable fashion brand, UK',
+      'O — Promote a product on Instagram',
+      'S — Punchy social media writing',
+      'T — Warm and aspirational',
+      'A — Velara Instagram followers',
+      'R — Single caption under 150 characters + hashtag',
+    ],
+    risen: [
+      'R — You are Velara\'s social media manager',
+      'I — Write an Instagram caption for the new collection',
+      'S — Lead with the brand story, hook in line 1, CTA last',
+      'E — A caption that drives engagement and fits the brand',
+      'N — Under 150 characters, one emoji, no clichés',
+    ],
+  },
+  wd3: {
+    craft: [
+      'C — A Velara customer\'s order arrived two weeks late',
+      'R — Act as a senior customer service representative',
+      'A — Write a professional email response to the complaint',
+      'F — Email format, 100-150 words',
+      'T — Empathetic, sophisticated, and genuinely apologetic',
+    ],
+    costar: [
+      'C — Late delivery complaint at Velara fashion brand',
+      'O — Retain the customer and resolve their frustration',
+      'S — Professional customer service writing',
+      'T — Warm, empathetic, and sincere',
+      'A — Upset customer who paid premium prices',
+      'R — Email reply, 100-150 words, with a discount offer',
+    ],
+    risen: [
+      'R — You are Velara\'s head of customer experience',
+      'I — Respond to a customer complaint about a late delivery',
+      'S — 1) Empathise 2) Apologise 3) Explain 4) Compensate 5) Close warmly',
+      'E — Customer feels heard and is likely to purchase again',
+      'N — Must not sound like a template. Include 10% discount.',
+    ],
+  },
+};
+
+// Word count helper
+function wordCount(s: string): number {
+  return s.trim() ? s.trim().split(/\s+/).length : 0;
+}
+
+// Score class helper
+function getScoreClass(pass: number, total: number): 'great' | 'ok' | 'low' {
+  if (pass / total >= 0.8) return 'great';
+  if (pass / total >= 0.5) return 'ok';
+  return 'low';
+}
+
+// XP for score helper
+function xpForScore(pass: number, total: number, max: number): number {
+  if (pass / total >= 0.8) return max;
+  if (pass / total >= 0.5) return Math.round(max * 0.5);
+  return Math.round(max * 0.2);
+}
+
 // Phase Progress Indicator Component
 function PhaseIndicator({ currentPhase }: { currentPhase: Phase }) {
   const phases = [
-    { id: 'prepare', label: 'Prepare', icon: '📖' },
-    { id: 'engage', label: 'Engage', icon: '🎯' },
-    { id: 'consolidate', label: 'Consolidate', icon: '🏅' },
+    { id: 'prepare', label: 'Prepare' },
+    { id: 'engage', label: 'Engage' },
+    { id: 'consolidate', label: 'Consolidate' },
   ];
+  const currentIndex = phases.findIndex(p => p.id === currentPhase);
 
   return (
-    <div className="flex items-center justify-center gap-2 mb-6">
+    <div className="flex bg-[#0D1E2E] border-b border-[#1C3348]">
       {phases.map((phase, idx) => {
-        const isActive = phase.id === currentPhase;
-        const isPast = phases.findIndex(p => p.id === currentPhase) > idx;
+        const isActive = idx === currentIndex;
+        const isPast = idx < currentIndex;
         
         return (
-          <div key={phase.id} className="flex items-center">
-            <div className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-full border transition-all",
-              isActive && "bg-gold text-navy border-gold",
-              isPast && "bg-green-500/20 text-green-400 border-green-500/50",
-              !isActive && !isPast && "bg-slate-800 text-slate-400 border-slate-700"
-            )}>
-              <span>{phase.icon}</span>
-              <span className="text-sm font-medium">{phase.label}</span>
-            </div>
-            {idx < phases.length - 1 && (
-              <div className={cn(
-                "w-8 h-0.5 mx-1",
-                isPast ? "bg-green-500" : "bg-slate-700"
-              )} />
+          <div
+            key={phase.id}
+            className={cn(
+              "flex-1 py-2.5 text-center font-mono text-[10px] tracking-widest uppercase border-r border-[#1C3348] last:border-r-0 transition-all",
+              isActive && "bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border-b-2 border-b-[#C9A84C]",
+              isPast && "text-[#2DD36F]",
+              !isActive && !isPast && "text-[#3D5870]"
             )}
+          >
+            {phase.label}
           </div>
         );
       })}
@@ -121,22 +244,37 @@ function PhaseIndicator({ currentPhase }: { currentPhase: Phase }) {
   );
 }
 
-// Slack Message Component
-function SlackMessage({ from, avatar, message, time }: { from: string; avatar: string; message: string; time: string }) {
+// Progress Bar Component
+function ProgressBar({ phase, prepareProgress, engageStage, weDoTask, youDoTask }: { 
+  phase: Phase; 
+  prepareProgress: number;
+  engageStage: EngageStage;
+  weDoTask: number;
+  youDoTask: number;
+}) {
+  const getPercentage = () => {
+    if (phase === 'prepare') return Math.min(90, prepareProgress);
+    if (phase === 'engage') {
+      if (engageStage === 'iDo') return 10;
+      if (engageStage === 'weDo') return 20 + (weDoTask - 1) * 20;
+      if (engageStage === 'youDo') return 60 + (youDoTask - 1) * 10;
+      if (engageStage === 'final') return 88;
+    }
+    return 100;
+  };
+  
+  const pct = getPercentage();
+
   return (
-    <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 mb-4 animate-slide-in">
-      <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gold flex items-center justify-center text-navy font-bold shrink-0">
-          {avatar}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-white">{from}</span>
-            <span className="text-xs text-slate-500">{time}</span>
-          </div>
-          <p className="text-slate-300 text-sm leading-relaxed">{message}</p>
-        </div>
+    <div className="flex items-center gap-3 px-5 py-2 bg-[#0D1E2E] border-b border-[#1C3348]">
+      <span className="font-mono text-[10px] text-[#3D5870] tracking-wider shrink-0">MISSION</span>
+      <div className="flex-1 h-[3px] bg-[#1C3348] rounded overflow-hidden">
+        <div 
+          className="h-full bg-gradient-to-r from-[#C9A84C] to-[#E8C96A] rounded transition-all duration-700"
+          style={{ width: `${pct}%` }}
+        />
       </div>
+      <span className="font-mono text-[10px] text-[#C9A84C] shrink-0 min-w-[32px] text-right">{pct}%</span>
     </div>
   );
 }
@@ -144,25 +282,29 @@ function SlackMessage({ from, avatar, message, time }: { from: string; avatar: s
 // Intel File Card Component
 function IntelFileCard({ title, subtitle, read, onToggle }: { title: string; subtitle: string; read: boolean; onToggle: () => void }) {
   return (
-    <div className={cn(
-      "bg-slate-900/80 border rounded-lg p-4 transition-all cursor-pointer",
-      read ? "border-green-500/50 bg-green-500/5" : "border-slate-700 hover:border-gold/50"
-    )} onClick={onToggle}>
-      <div className="flex items-start gap-3">
-        <div className={cn(
-          "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
-          read ? "bg-green-500/20 text-green-400" : "bg-navy text-gold"
-        )}>
-          {read ? '✓' : '📄'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-white text-sm">{title}</h4>
-          <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
-        </div>
-        <div className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded">
-          {read ? 'READ' : 'READ?'}
-        </div>
+    <div
+      className={cn(
+        "bg-[#112030] border rounded-lg p-3.5 cursor-pointer transition-all flex items-center gap-3",
+        read ? "border-[rgba(45,211,111,0.35)] bg-[rgba(45,211,111,0.04)]" : "border-[#1C3348] hover:border-[rgba(201,168,76,0.4)] hover:-translate-y-0.5"
+      )}
+      onClick={onToggle}
+    >
+      <div className={cn(
+        "w-10 h-12 rounded flex flex-col items-center justify-center font-mono text-[9px] font-bold tracking-wider shrink-0",
+        read ? "bg-[rgba(45,211,111,0.1)] text-[#2DD36F]" : "bg-[#1C3348] text-[#3D5870]"
+      )}>
+        {read ? <span className="text-lg">✓</span> : 'PDF'}
       </div>
+      <div className="flex-1 min-w-0">
+        <h4 className="font-semibold text-white text-[13px]">{title}</h4>
+        <p className="text-[11px] text-[#3D5870] leading-tight mt-0.5">{subtitle}</p>
+      </div>
+      <span className={cn(
+        "font-mono text-[9px] px-2 py-1 rounded tracking-wider shrink-0",
+        read ? "bg-[rgba(45,211,111,0.12)] text-[#2DD36F] border border-[rgba(45,211,111,0.3)]" : "border border-[#3D5870] text-[#3D5870]"
+      )}>
+        {read ? 'READ' : 'UNREAD'}
+      </span>
     </div>
   );
 }
@@ -175,196 +317,394 @@ function VideoCard({ title, duration, url, watched, onToggle }: { title: string;
       target="_blank" 
       rel="noopener noreferrer"
       className={cn(
-        "bg-slate-900/80 border rounded-lg p-4 transition-all block group",
-        watched ? "border-green-500/50" : "border-slate-700 hover:border-gold/50"
+        "bg-[#112030] border rounded-lg overflow-hidden transition-all block group",
+        watched ? "border-[rgba(45,211,111,0.3)]" : "border-[#1C3348] hover:border-[rgba(201,168,76,0.4)] hover:-translate-y-0.5"
       )}
       onClick={onToggle}
     >
-      <div className="flex items-start gap-3">
+      <div className={cn(
+        "h-14 flex items-center justify-center",
+        watched ? "bg-[rgba(45,211,111,0.08)]" : "bg-[#1C3348]"
+      )}>
         <div className={cn(
-          "w-16 h-12 rounded bg-slate-800 flex items-center justify-center shrink-0 group-hover:bg-navy transition-colors",
-          watched && "bg-green-500/20"
+          "w-7 h-7 rounded-full border-1.5 flex items-center justify-center text-[11px]",
+          watched ? "border-[#2DD36F] text-[#2DD36F]" : "border-[#C9A84C] text-[#C9A84C]"
         )}>
-          {watched ? (
-            <span className="text-green-400">✓</span>
-          ) : (
-            <span className="text-gold text-xl">▶</span>
-          )}
+          {watched ? '✓' : '▶'}
         </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-white text-sm group-hover:text-gold transition-colors">{title}</h4>
-          <p className="text-xs text-slate-500 mt-1">{duration}</p>
-        </div>
-        <span className="text-slate-400 group-hover:text-gold transition-colors">↗</span>
+      </div>
+      <div className="p-2.5">
+        <p className="text-[11px] font-medium text-white leading-tight mb-0.5">{title}</p>
+        <p className="font-mono text-[10px] text-[#3D5870]">{duration}</p>
       </div>
     </a>
   );
 }
 
 // MCQ Gate Component
-function MCQGate({ onComplete }: { onComplete: () => void }) {
-  const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
-  const [showRetry, setShowRetry] = useState(false);
-
-  const handleSubmit = () => {
-    let correct = 0;
-    mcqQuestions.forEach(q => {
-      if (answers[q.id] === q.correct) correct++;
-    });
-    setScore(correct);
-    setSubmitted(true);
-
-    if (correct === 5) {
-      setTimeout(onComplete, 1500);
-    } else {
-      setShowRetry(true);
-    }
-  };
-
-  const handleRetry = () => {
-    setAnswers({});
-    setSubmitted(false);
-    setScore(0);
-    setShowRetry(false);
-  };
-
+function MCQGate({ answers, submitted, score, onAnswer, onSubmit, onRetry }: {
+  answers: Record<string, number>;
+  submitted: boolean;
+  score: number;
+  onAnswer: (qi: number, oi: number) => void;
+  onSubmit: () => void;
+  onRetry: () => void;
+}) {
   return (
-    <div className="bg-slate-900/80 border border-slate-700 rounded-xl overflow-hidden">
-      <div className="bg-navy px-4 py-3 border-b border-gold/30">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-gold text-lg">🔐</span>
-            <h3 className="text-white font-semibold">Security Clearance</h3>
-          </div>
-          <span className="text-xs text-slate-400">Score 5/5 to proceed</span>
-        </div>
+    <div className="bg-[#112030] border border-[#1C3348] rounded-lg overflow-hidden">
+      {/* Header */}
+      <div className="bg-[rgba(201,168,76,0.08)] border-b border-[#1C3348] px-4.5 py-3 flex items-center justify-between">
+        <span className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest">🔐 CLEARANCE REQUIRED</span>
+        <span className="font-mono text-[10px] text-[#3D5870]">SCORE 5/5 TO ENTER HQ</span>
       </div>
 
-      <div className="p-4 space-y-4">
-        {mcqQuestions.map((q, idx) => (
-          <div key={q.id} className="space-y-2">
-            <p className="text-white text-sm font-medium">
-              {idx + 1}. {q.question}
-            </p>
-            <div className="grid gap-2">
-              {q.options.map((opt, optIdx) => (
-                <label
-                  key={optIdx}
-                  className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                    submitted && optIdx === q.correct && "bg-green-500/20 border-green-500",
-                    submitted && answers[q.id] === optIdx && optIdx !== q.correct && "bg-red-500/20 border-red-500",
-                    !submitted && answers[q.id] === optIdx && "bg-gold/10 border-gold",
-                    !submitted && answers[q.id] !== optIdx && "bg-slate-800 border-slate-700 hover:border-gold/50"
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name={q.id}
-                    checked={answers[q.id] === optIdx}
-                    onChange={() => !submitted && setAnswers(prev => ({ ...prev, [q.id]: optIdx }))}
-                    className="text-gold"
-                    disabled={submitted}
-                  />
-                  <span className="text-sm text-slate-300">{opt}</span>
-                  {submitted && optIdx === q.correct && (
-                    <span className="ml-auto text-green-400 text-xs">✓ Correct</span>
-                  )}
-                  {submitted && answers[q.id] === optIdx && optIdx !== q.correct && (
-                    <span className="ml-auto text-red-400 text-xs">✗ Incorrect</span>
-                  )}
-                </label>
-              ))}
+      {/* Questions */}
+      <div className="p-4.5">
+        {mcqQuestions.map((q, qi) => (
+          <div key={q.id} className="mb-4.5 pb-4.5 border-b border-[#1C3348] last:border-0 last:mb-0 last:pb-0">
+            <p className="font-mono text-[10px] text-[#C9A84C] tracking-wider mb-1.5">Q{qi + 1} OF 5</p>
+            <p className="text-[13px] text-white leading-relaxed mb-2.5">{q.question}</p>
+            <div className="space-y-1.5">
+              {q.options.map((opt, oi) => {
+                const isSelected = answers[qi] === oi;
+                const isCorrect = q.correct === oi;
+                const showCorrect = submitted && isCorrect;
+                const showWrong = submitted && isSelected && !isCorrect;
+                
+                return (
+                  <label
+                    key={oi}
+                    className={cn(
+                      "flex items-center gap-2.5 p-2.5 px-3 border rounded-md cursor-pointer transition-all text-[12px]",
+                      showCorrect && "border-[#2DD36F] bg-[rgba(45,211,111,0.08)] text-[#2DD36F]",
+                      showWrong && "border-[#EF4444] bg-[rgba(239,68,68,0.08)] text-[#EF4444]",
+                      !submitted && isSelected && "border-[#C9A84C] bg-[rgba(201,168,76,0.12)] text-white",
+                      !submitted && !isSelected && "border-[#1C3348] text-[#7A9AB5] hover:border-[rgba(201,168,76,0.4)] hover:bg-[rgba(201,168,76,0.12)]",
+                      submitted && !showCorrect && !showWrong && "border-[#1C3348] text-[#7A9AB5] cursor-default"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name={q.id}
+                      checked={isSelected}
+                      onChange={() => !submitted && onAnswer(qi, oi)}
+                      className="accent-[#C9A84C] shrink-0"
+                      disabled={submitted}
+                    />
+                    <span>{opt}</span>
+                    {showCorrect && <span className="ml-auto text-[11px]">✓</span>}
+                    {showWrong && <span className="ml-auto text-[11px]">✗</span>}
+                  </label>
+                );
+              })}
             </div>
           </div>
         ))}
 
+        {/* Result */}
         {submitted && (
           <div className={cn(
-            "p-4 rounded-lg text-center",
-            score === 5 ? "bg-green-500/20 border border-green-500/50" : "bg-gold/10 border border-gold/30"
+            "p-3.5 rounded-md text-center font-mono text-[11px] font-bold tracking-wider mb-3.5",
+            score === 5 ? "bg-[rgba(45,211,111,0.1)] border border-[rgba(45,211,111,0.3)] text-[#2DD36F]" : "bg-[rgba(201,168,76,0.08)] border border-[rgba(201,168,76,0.25)] text-[#C9A84C]"
           )}>
-            <p className={cn("font-bold text-lg", score === 5 ? "text-green-400" : "text-gold")}>
-              {score === 5 && "🎉 Security Clearance Granted! Proceeding to Engage phase..."}
-              {score === 4 && "Almost there! One more try."}
-              {score <= 3 && "Some material needs another look. Please review and retry."}
-            </p>
-            <p className="text-slate-400 text-sm mt-2">Score: {score}/5</p>
+            {score === 5 ? `ACCESS GRANTED — ${score}/5 CORRECT — PROCEEDING TO HQ` : `CLEARANCE DENIED — ${score}/5 — REVIEW INTEL AND RETRY`}
           </div>
         )}
 
+        {/* Buttons */}
         {!submitted ? (
           <button
-            onClick={handleSubmit}
+            onClick={onSubmit}
             disabled={Object.keys(answers).length < 5}
-            className="w-full py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
           >
-            Submit for Verification
+            SUBMIT FOR VERIFICATION
           </button>
-        ) : showRetry && score < 5 ? (
+        ) : score < 5 && (
           <button
-            onClick={handleRetry}
-            className="w-full py-3 bg-navy border border-gold text-gold rounded-lg font-semibold hover:bg-navy-light transition-all"
+            onClick={onRetry}
+            className="w-full py-2.5 bg-transparent border border-[#C9A84C] text-[#C9A84C] rounded-md font-mono text-[10px] font-bold tracking-widest uppercase hover:bg-[rgba(201,168,76,0.12)] transition-all"
           >
-            Retry Clearance Check
+            RETRY CLEARANCE CHECK
           </button>
-        ) : null}
+        )}
       </div>
     </div>
   );
 }
 
-// Task Card Component
-function TaskCard({ title, children, badge }: { title: string; children: React.ReactNode; badge?: string }) {
+// Framework Reference Card Component
+function FrameworkCard({ 
+  activeFW, 
+  setActiveFW, 
+  isOpen, 
+  setIsOpen,
+  taskKey 
+}: { 
+  activeFW: FrameworkType; 
+  setActiveFW: (fw: FrameworkType) => void;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  taskKey: string;
+}) {
+  const fw = FRAMEWORKS[activeFW];
+  const applyHints = FW_APPLY[taskKey]?.[activeFW];
+
   return (
-    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5 mb-4 animate-slide-in">
-      {badge && (
-        <div className="inline-block px-2 py-1 bg-gold/20 text-gold text-xs rounded mb-3">
-          {badge}
+    <div className="bg-[#08131E] border border-[#1C3348] rounded-lg overflow-hidden mb-4">
+      {/* Toggle Header */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 hover:bg-[rgba(201,168,76,0.05)] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-lg">📐</span>
+          <div className="text-left">
+            <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest">FRAMEWORK REFERENCE</p>
+            <p className="text-[11px] text-[#3D5870] mt-0.5">CRAFT · CO-STAR · RISEN — pick one and apply it below</p>
+          </div>
+        </div>
+        <span className={cn(
+          "font-mono text-[14px] text-[#C9A84C] transition-transform duration-250",
+          isOpen && "rotate-180"
+        )}>▼</span>
+      </button>
+
+      {/* Body */}
+      {isOpen && (
+        <div className="px-4 pb-4 animate-fade-in">
+          {/* Tabs */}
+          <div className="flex gap-1.5 mb-3.5 pt-1">
+            {(['craft', 'costar', 'risen'] as FrameworkType[]).map((fwKey) => {
+              const f = FRAMEWORKS[fwKey];
+              return (
+                <button
+                  key={fwKey}
+                  onClick={() => setActiveFW(fwKey)}
+                  className={cn(
+                    "px-3 py-1.5 rounded font-mono text-[10px] font-bold tracking-wider uppercase transition-all border",
+                    activeFW === fwKey 
+                      ? `border-current` 
+                      : "border-transparent"
+                  )}
+                  style={{
+                    color: f.color,
+                    backgroundColor: activeFW === fwKey ? `${f.color}26` : 'transparent',
+                    borderColor: activeFW === fwKey ? f.color : `${f.color}4D`
+                  }}
+                >
+                  {f.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Description */}
+          <div 
+            className="text-[12px] text-[#7A9AB5] leading-relaxed p-3 rounded border-l-2 mb-3"
+            style={{ borderColor: fw.color, backgroundColor: `${fw.color}0D` }}
+          >
+            {fw.desc}
+          </div>
+
+          {/* Letters Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+            {fw.letters.map((l) => (
+              <div
+                key={l.k}
+                className="p-2.5 rounded border"
+                style={{ 
+                  borderColor: `${fw.color}33`,
+                  backgroundColor: `${fw.color}12`
+                }}
+              >
+                <p className="font-mono text-[13px] font-bold" style={{ color: fw.color }}>{l.k}</p>
+                <p className="text-[12px] font-semibold text-white mt-0.5">{l.l}</p>
+                <p className="text-[11px] text-[#3D5870] leading-tight mt-0.5">{l.h}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Example */}
+          <div className="p-3 bg-[rgba(201,168,76,0.05)] border border-[rgba(201,168,76,0.15)] rounded">
+            <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">{fw.example.label}</p>
+            <p className="text-[12px] text-[#9DBBD4] leading-relaxed">{fw.example.text}</p>
+          </div>
+
+          {/* Apply Hints */}
+          {applyHints && (
+            <div className="mt-3 p-3 bg-[rgba(201,168,76,0.06)] border border-[rgba(201,168,76,0.15)] rounded">
+              <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">Apply to this task</p>
+              {applyHints.map((hint, idx) => {
+                const letter = hint.split(' — ')[0];
+                const text = hint.split(' — ')[1];
+                return (
+                  <div key={idx} className="flex items-baseline gap-1.5 text-[12px] mb-1 last:mb-0">
+                    <span className="font-mono text-[11px] font-bold shrink-0" style={{ color: fw.color }}>{letter}</span>
+                    <span className="text-[#7A9AB5]">{text}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
-      <h4 className="text-white font-semibold mb-4">{title}</h4>
-      {children}
     </div>
   );
 }
 
-// Score Breakdown Component
-function ScoreBreakdown({ criteria }: { criteria: { name: string; passed: boolean }[] }) {
-  const passedCount = criteria.filter(c => c.passed).length;
-  
+// Score Grid Component
+function ScoreGrid({ criteria }: { criteria: { n: string; p: boolean }[] }) {
+  const pass = criteria.filter(c => c.p).length;
+  const total = criteria.length;
+  const cls = getScoreClass(pass, total);
+
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mt-4">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-white">Score Breakdown</span>
-        <span className={cn(
-          "text-sm font-bold",
-          passedCount >= 4 ? "text-green-400" : passedCount >= 2 ? "text-gold" : "text-red-400"
-        )}>
-          {passedCount}/{criteria.length}
-        </span>
-      </div>
-      <div className="space-y-2">
-        {criteria.map((c, idx) => (
-          <div key={idx} className="flex items-center justify-between text-sm">
-            <span className="text-slate-400">{c.name}</span>
-            <span className={c.passed ? "text-green-400" : "text-red-400"}>
-              {c.passed ? '✓' : '✗'}
-            </span>
+    <div className="mt-3.5">
+      <div className="grid grid-cols-2 gap-1.5">
+        {criteria.map((cr, idx) => (
+          <div
+            key={idx}
+            className={cn(
+              "flex items-center justify-between p-2.5 px-3 bg-[#08131E] rounded text-[11px]",
+              cr.p ? "border-l-2 border-[#2DD36F] text-white" : "border-l-2 border-[rgba(239,68,68,0.3)] text-[#3D5870]"
+            )}
+          >
+            <span>{cr.n}</span>
+            <span className="text-[12px]">{cr.p ? '✓' : '✗'}</span>
           </div>
         ))}
       </div>
+      <div className={cn(
+        "mt-2.5 p-3 rounded text-center font-mono text-[12px] font-bold tracking-wider",
+        cls === 'great' && "bg-[rgba(45,211,111,0.1)] border border-[rgba(45,211,111,0.25)] text-[#2DD36F]",
+        cls === 'ok' && "bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.25)] text-[#F59E0B]",
+        cls === 'low' && "bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] text-[#EF4444]"
+      )}>
+        {pass}/{total} CRITERIA MET — {Math.round(pass / total * 100)}%
+      </div>
     </div>
   );
 }
 
-// XP Animation Component
-function XPCounter({ amount }: { amount: number }) {
+// XP Burst Component
+function XPBurst({ amount, label }: { amount: number; label: string }) {
   return (
-    <div className="text-center animate-fade-in">
-      <span className="text-gold text-lg font-bold">+{amount} XP</span>
+    <div className="text-center py-4 animate-pop-in">
+      <span className="font-mono text-[26px] font-bold text-[#C9A84C]">+{amount} XP</span>
+      <span className="block font-mono text-[10px] text-[#3D5870] tracking-widest mt-1">{label}</span>
+    </div>
+  );
+}
+
+// What Went Wrong Component
+function MissBox({ missed, hints }: { missed: { n: string }[]; hints: Record<string, string> }) {
+  return (
+    <div className="bg-[#08131E] border border-[#1C3348] rounded p-3.5 mt-2.5">
+      <p className="font-mono text-[9px] font-bold text-[#3D5870] tracking-widest uppercase mb-2">What to improve</p>
+      {missed.map((m, idx) => (
+        <div key={idx} className="flex items-start gap-2.5 py-2 border-b border-[#1C3348] last:border-0 last:pb-0">
+          <span className="text-[#F59E0B] shrink-0">→</span>
+          <div>
+            <p className="text-[12px] font-medium text-[#3D5870]">{m.n}</p>
+            <p className="text-[12px] text-[#7A9AB5]">{hints[m.n] || 'Add this element'}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Scaffold Component (fill-in-the-blank)
+function Scaffold({ 
+  task, 
+  activeFW, 
+  onBuild 
+}: { 
+  task: 'wd2' | 'wd3'; 
+  activeFW: FrameworkType;
+  onBuild: (fields: Record<string, string>) => void;
+}) {
+  const fw = FRAMEWORKS[activeFW];
+  const [fields, setFields] = useState<Record<string, string>>({});
+
+  const fieldDefs: Record<string, Record<FrameworkType, { key: string; label: string; ph: string }[]>> = {
+    wd2: {
+      craft: [
+        { key: 'role', label: 'R — Role', ph: 'e.g. Act as a social media copywriter for Velara' },
+        { key: 'platform', label: 'A — Action', ph: 'e.g. Write an Instagram caption for our summer collection' },
+        { key: 'brand', label: 'C — Context', ph: 'e.g. Velara is a British sustainable luxury fashion brand' },
+        { key: 'format', label: 'F — Format', ph: 'e.g. Under 150 characters, one emoji, hashtag #VelaraStyle' },
+        { key: 'detail', label: 'T — Tone', ph: 'e.g. Sophisticated, warm, and aspirational' },
+      ],
+      costar: [
+        { key: 'role', label: 'C — Context', ph: 'e.g. Velara is a British sustainable luxury fashion brand' },
+        { key: 'platform', label: 'O — Objective', ph: 'e.g. Promote the summer collection on Instagram' },
+        { key: 'brand', label: 'S — Style', ph: 'e.g. Punchy, image-led social media copy' },
+        { key: 'format', label: 'T — Tone', ph: 'e.g. Warm and aspirational' },
+        { key: 'detail', label: 'A+R — Audience & Response', ph: 'e.g. Velara followers. One caption under 150 characters + hashtag' },
+      ],
+      risen: [
+        { key: 'role', label: 'R — Role', ph: "e.g. You are Velara's Instagram copywriter" },
+        { key: 'platform', label: 'I — Instruction', ph: 'e.g. Write an Instagram caption for the new summer dress' },
+        { key: 'brand', label: 'S — Steps', ph: 'e.g. Hook in line 1, brand story in line 2, CTA last' },
+        { key: 'format', label: 'E — End goal', ph: 'e.g. A caption that drives engagement and fits the brand' },
+        { key: 'detail', label: 'N — Narrowing', ph: 'e.g. Under 150 chars, one emoji, no generic phrases' },
+      ],
+    },
+    wd3: {
+      craft: [
+        { key: 'role', label: 'R — Role', ph: 'e.g. Act as a senior customer service rep for Velara' },
+        { key: 'context', label: 'C — Context', ph: 'e.g. A customer complained their order arrived two weeks late' },
+        { key: 'tone', label: 'T — Tone', ph: 'e.g. Empathetic, apologetic, sophisticated — never robotic' },
+        { key: 'format', label: 'F — Format', ph: 'e.g. Email reply, 100-150 words' },
+        { key: 'detail', label: 'A — Action', ph: 'e.g. Write a response that retains the customer' },
+      ],
+      costar: [
+        { key: 'role', label: 'C — Context', ph: 'e.g. Late delivery complaint at Velara fashion brand' },
+        { key: 'context', label: 'O — Objective', ph: 'e.g. Retain the customer and resolve their frustration' },
+        { key: 'tone', label: 'S+T — Style & Tone', ph: 'e.g. Professional, empathetic, and warm' },
+        { key: 'format', label: 'A — Audience', ph: 'e.g. An upset customer who paid premium prices' },
+        { key: 'detail', label: 'R — Response', ph: 'e.g. Email reply, 100-150 words, with 10% discount offer' },
+      ],
+      risen: [
+        { key: 'role', label: 'R — Role', ph: "e.g. You are Velara's head of customer experience" },
+        { key: 'context', label: 'I — Instruction', ph: 'e.g. Write a reply to a late delivery complaint' },
+        { key: 'tone', label: 'S — Steps', ph: 'e.g. 1) Empathise 2) Apologise 3) Offer 10% discount 4) Close warmly' },
+        { key: 'format', label: 'E — End goal', ph: 'e.g. Customer feels heard and stays loyal to Velara' },
+        { key: 'detail', label: 'N — Narrowing', ph: 'e.g. Do not sound like a template. Under 150 words.' },
+      ],
+    },
+  };
+
+  const defs = fieldDefs[task][activeFW];
+
+  return (
+    <div className="mt-3 p-4 bg-[rgba(201,168,76,0.04)] border border-[rgba(201,168,76,0.15)] rounded">
+      <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase">🔧 GUIDED RETRY — Fill in each {fw.name} field, then hit Build</p>
+      <p className="text-[11px] text-[#3D5870] mt-1 mb-3.5">The built prompt will replace what&apos;s in the text box above so you can edit and resubmit.</p>
+      
+      {defs.map((f) => (
+        <div key={f.key} className="mb-2.5">
+          <p className="text-[11px] font-medium text-[#7A9AB5] mb-1.5 flex items-center gap-1.5">
+            <span className="font-mono text-[10px] text-[#C9A84C] font-bold">{f.label}</span>
+          </p>
+          <input
+            type="text"
+            placeholder={f.ph}
+            value={fields[f.key] || ''}
+            onChange={(e) => setFields({ ...fields, [f.key]: e.target.value })}
+            className="w-full p-2.5 px-3 bg-[#08131E] border border-[#1C3348] rounded text-[12px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] transition-colors placeholder:text-[#3D5870]"
+          />
+        </div>
+      ))}
+
+      <button
+        onClick={() => onBuild(fields)}
+        className="w-full mt-2.5 py-3 bg-[rgba(201,168,76,0.15)] border border-[rgba(201,168,76,0.35)] rounded font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase hover:bg-[rgba(201,168,76,0.25)] hover:-translate-y-0.5 transition-all"
+      >
+        ▶ BUILD {fw.name} PROMPT — REPLACES TEXT BOX ABOVE
+      </button>
     </div>
   );
 }
@@ -373,44 +713,52 @@ function XPCounter({ amount }: { amount: number }) {
 export default function Module1Page() {
   const router = useRouter();
   const { progress, isLoaded, addXP, addBadge, completeModule2, completePrepare2 } = useAcademyProgress();
-  
+
   // Phase state
   const [phase, setPhase] = useState<Phase>('prepare');
   const [moduleXP, setModuleXP] = useState(0);
-  
+
   // Prepare state
   const [paper1Read, setPaper1Read] = useState(false);
   const [paper2Read, setPaper2Read] = useState(false);
   const [videosWatched, setVideosWatched] = useState<boolean[]>([false, false, false]);
-  const [mcqComplete, setMcqComplete] = useState(false);
-  
+  const [mcqAnswers, setMcqAnswers] = useState<Record<string, number>>({});
+  const [mcqSubmitted, setMcqSubmitted] = useState(false);
+  const [mcqScore, setMcqScore] = useState(0);
+
   // Engage state
   const [engageStage, setEngageStage] = useState<EngageStage>('iDo');
-  const [iDoWatched, setIDoWatched] = useState(false);
-  
+  const [idoCheck, setIdoCheck] = useState(false);
+
+  // Framework state
+  const [activeFW, setActiveFW] = useState<FrameworkType>('craft');
+  const [fwOpen, setFwOpen] = useState(true);
+
   // We Do state
   const [weDoTask, setWeDoTask] = useState(1);
-  const [weDo1Answers, setWeDo1Answers] = useState<string[]>([]);
-  const [weDo1Complete, setWeDo1Complete] = useState(false);
-  const [weDo2Text, setWeDo2Text] = useState('');
-  const [weDo2Score, setWeDo2Score] = useState<{ name: string; passed: boolean }[] | null>(null);
-  const [weDo3Text, setWeDo3Text] = useState('');
-  const [weDo3Score, setWeDo3Score] = useState<{ name: string; passed: boolean }[] | null>(null);
-  
+  const [wd1Sel, setWd1Sel] = useState<string[]>([]);
+  const [wd1Done, setWd1Done] = useState(false);
+  const [wd2Txt, setWd2Txt] = useState('');
+  const [wd2Score, setWd2Score] = useState<{ n: string; p: boolean }[] | null>(null);
+  const [wd2Done, setWd2Done] = useState(false);
+  const [wd3Txt, setWd3Txt] = useState('');
+  const [wd3Score, setWd3Score] = useState<{ n: string; p: boolean }[] | null>(null);
+  const [wd3Done, setWd3Done] = useState(false);
+
   // You Do state
   const [youDoTask, setYouDoTask] = useState(1);
-  const [youDo1Text, setYouDo1Text] = useState('');
-  const [youDo1Score, setYouDo1Score] = useState<{ name: string; passed: boolean }[] | null>(null);
-  const [youDo2Text, setYouDo2Text] = useState('');
-  const [youDo2Score, setYouDo2Score] = useState<{ name: string; passed: boolean }[] | null>(null);
-  const [youDo3Text, setYouDo3Text] = useState('');
-  const [youDo3Score, setYouDo3Score] = useState<{ name: string; passed: boolean }[] | null>(null);
-  
-  // Final challenge state
-  const [finalPrompt, setFinalPrompt] = useState('');
-  const [finalExplanation, setFinalExplanation] = useState('');
-  const [finalScore, setFinalScore] = useState<{ name: string; passed: boolean }[] | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [yd1Txt, setYd1Txt] = useState('');
+  const [yd1Score, setYd1Score] = useState<{ n: string; p: boolean }[] | null>(null);
+  const [yd2Txt, setYd2Txt] = useState('');
+  const [yd2Score, setYd2Score] = useState<{ n: string; p: boolean }[] | null>(null);
+  const [yd3Txt, setYd3Txt] = useState('');
+  const [yd3Score, setYd3Score] = useState<{ n: string; p: boolean }[] | null>(null);
+
+  // Final state
+  const [fp, setFp] = useState('');
+  const [fe, setFe] = useState('');
+  const [fScore, setFScore] = useState<{ n: string; p: boolean }[] | null>(null);
+  const [fDone, setFDone] = useState(false);
 
   // Redirect checks
   useEffect(() => {
@@ -419,309 +767,303 @@ export default function Module1Page() {
     }
   }, [isLoaded, progress.studentName, router]);
 
-  // Check if returning user
+  // Check if returning user - properly restore all state
   useEffect(() => {
-    if (progress.course2PrepareCompleted.includes(1)) {
-      setMcqComplete(true);
+    // If module is completed, show consolidate phase (review mode)
+    if (progress.course2ModulesCompleted.includes(1)) {
+      setMcqSubmitted(true);
+      setMcqScore(5);
       setPaper1Read(true);
       setPaper2Read(true);
+      setVideosWatched([true, true, true]);
+      setIdoCheck(true);
+      setWd1Done(true);
+      setWd1Sel(WD_OPTS);
+      setWd2Done(true);
+      setWd3Done(true);
+      setPhase('consolidate');
+      setModuleXP(700); // Approximate XP for completed module
+    }
+    // If prepare is completed but module not done, start at engage
+    else if (progress.course2PrepareCompleted.includes(1)) {
+      setMcqSubmitted(true);
+      setMcqScore(5);
+      setPaper1Read(true);
+      setPaper2Read(true);
+      setVideosWatched([true, true, true]);
       setPhase('engage');
     }
-  }, [progress.course2PrepareCompleted]);
+  }, [progress.course2PrepareCompleted, progress.course2ModulesCompleted]);
 
-  // Handle MCQ complete
-  const handleMcqComplete = async () => {
-    setMcqComplete(true);
-    completePrepare2(1);
-    setPhase('engage');
-    
-    // Log prepare complete
-    await logProgress({
-      studentName: progress.studentName,
-      studentId: progress.studentId,
-      event: 'Module 1 Prepare Complete',
-      details: 'MCQ passed with 5/5 score',
-      totalXP: progress.totalXP,
-    });
+  // MCQ handlers
+  const handleMcqAnswer = (qi: number, oi: number) => {
+    setMcqAnswers({ ...mcqAnswers, [qi]: oi });
   };
 
-  // We Do Task 1 - Multiple selection
-  const handleWeDo1Submit = () => {
-    const allCorrect = ['No role assigned to the AI', 'No output format specified', 'No brand context provided', 'No target audience mentioned'];
-    const isAllSelected = allCorrect.every(opt => weDo1Answers.includes(opt));
-    if (isAllSelected) {
-      setWeDo1Complete(true);
-      setWeDoTask(2);
+  const handleMcqSubmit = () => {
+    let sc = 0;
+    mcqQuestions.forEach((q, i) => {
+      if (mcqAnswers[i] === q.correct) sc++;
+    });
+    setMcqScore(sc);
+    setMcqSubmitted(true);
+    if (sc === 5) {
+      addXP(50);
+      setModuleXP(prev => prev + 50);
+      completePrepare2(1);
+      setTimeout(() => {
+        setPhase('engage');
+      }, 1800);
     }
   };
 
-  // We Do Task 2 - Rule-based scoring
-  const handleWeDo2Submit = () => {
-    const text = weDo2Text.toLowerCase();
-    const criteria = [
-      { name: 'Role Assignment', passed: text.includes('act as') || text.includes('you are') || text.includes('as a') },
-      { name: 'Platform Context', passed: text.includes('instagram') || text.includes('social media') || text.includes('post') },
-      { name: 'Brand Reference', passed: text.includes('velara') || text.includes('brand') || text.includes('fashion') || text.includes('sustainable') },
-      { name: 'Format Specification', passed: text.includes('caption') || text.includes('format') || text.includes('characters') || text.includes('words') },
-      { name: 'Sufficient Detail', passed: weDo2Text.split(/\s+/).length >= 30 },
-    ];
-    setWeDo2Score(criteria);
-    
-    const xp = 25;
-    setModuleXP(prev => prev + xp);
-    addXP(xp);
-    
-    setTimeout(() => {
-      setWeDoTask(3);
-    }, 2000);
+  const handleMcqRetry = () => {
+    setMcqAnswers({});
+    setMcqSubmitted(false);
+    setMcqScore(0);
   };
 
-  // We Do Task 3
-  const handleWeDo3Submit = () => {
-    const text = weDo3Text.toLowerCase();
+  // WD2 handlers
+  const handleWd2Submit = () => {
+    const t = wd2Txt.toLowerCase();
     const criteria = [
-      { name: 'Customer Context', passed: text.includes('customer') || text.includes('complaint') || text.includes('delivery') },
-      { name: 'Empathy Language', passed: text.includes('empath') || text.includes('apolog') || text.includes('professional') },
-      { name: 'Email Format', passed: text.includes('email') || text.includes('response') || text.includes('reply') },
-      { name: 'Tone Specification', passed: text.includes('tone') || text.includes('formal') || text.includes('brand voice') },
-      { name: 'Sufficient Detail', passed: weDo3Text.split(/\s+/).length >= 40 },
+      { n: 'Role assigned', p: t.includes('act as') || t.includes('you are') || t.includes('as a') },
+      { n: 'Platform context', p: t.includes('instagram') || t.includes('social media') || t.includes('post') },
+      { n: 'Brand reference', p: t.includes('velara') || t.includes('brand') || t.includes('fashion') || t.includes('sustainable') },
+      { n: 'Format specified', p: t.includes('caption') || t.includes('format') || t.includes('character') || t.includes('150') || t.includes('hashtag') },
+      { n: 'Sufficient detail', p: wordCount(wd2Txt) >= 30 },
     ];
-    setWeDo3Score(criteria);
-    
-    const xp = 50;
-    setModuleXP(prev => prev + xp);
+    setWd2Score(criteria);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 25);
     addXP(xp);
-    
-    setTimeout(() => {
-      setEngageStage('youDo');
-    }, 2000);
+    setModuleXP(prev => prev + xp);
   };
 
-  // You Do Challenge scoring functions
-  const checkYouDo1 = () => {
-    const text = youDo1Text.toLowerCase();
-    const criteria = [
-      { name: 'Role Assigned', passed: text.includes('act as') || text.includes('you are') || text.includes('as a') },
-      { name: 'Product Mentioned', passed: text.includes('velara') || text.includes('midnight edit') },
-      { name: 'Length Specified', passed: text.includes('150') || text.includes('word count') || text.includes('length') },
-      { name: 'Brand Voice', passed: text.includes('sophisticated') || text.includes('sustainable') || text.includes('british') || text.includes('elegant') },
-      { name: 'Output Format', passed: text.includes('description') || text.includes('paragraph') || text.includes('copy') },
-    ];
-    setYouDo1Score(criteria);
-    
-    const score = criteria.filter(c => c.passed).length;
-    const xp = score >= 4 ? 100 : score >= 2 ? 50 : 0;
-    setModuleXP(prev => prev + xp);
-    addXP(xp);
-    
-    logProgress({
-      studentName: progress.studentName,
-      studentId: progress.studentId,
-      event: 'You Do Challenge 1 Complete',
-      details: `Score: ${score}/5, XP: ${xp}`,
-      totalXP: progress.totalXP + xp,
-    });
-    
-    setTimeout(() => setYouDoTask(2), 2000);
+  const handleWd2Scaffold = (fields: Record<string, string>) => {
+    const parts = Object.values(fields).filter(Boolean);
+    if (parts.length) {
+      setWd2Txt(parts.join('. ') + '.');
+      setWd2Score(null);
+    }
   };
 
-  const checkYouDo2 = () => {
-    const text = youDo2Text.toLowerCase();
+  // WD3 handlers
+  const handleWd3Submit = () => {
+    const t = wd3Txt.toLowerCase();
     const criteria = [
-      { name: 'Quantity Specified', passed: text.includes('5') || text.includes('five') },
-      { name: 'Character Limit', passed: text.includes('150') || text.includes('character') },
-      { name: 'Emoji Requirement', passed: text.includes('emoji') },
-      { name: 'Hashtag Requirement', passed: text.includes('hashtag') },
-      { name: 'Sufficient Detail', passed: youDo2Text.split(/\s+/).length >= 50 },
+      { n: 'Customer context', p: t.includes('customer') || t.includes('complaint') || t.includes('delivery') || t.includes('late') },
+      { n: 'Empathy/tone', p: t.includes('empath') || t.includes('apolog') || t.includes('professional') || t.includes('understanding') },
+      { n: 'Response format', p: t.includes('email') || t.includes('response') || t.includes('reply') },
+      { n: 'Brand voice', p: t.includes('tone') || t.includes('formal') || t.includes('brand') || t.includes('velara') || t.includes('sophisticated') },
+      { n: 'Sufficient detail', p: wordCount(wd3Txt) >= 40 },
     ];
-    setYouDo2Score(criteria);
-    
-    const score = criteria.filter(c => c.passed).length;
-    const xp = score >= 4 ? 150 : score >= 2 ? 75 : 0;
-    setModuleXP(prev => prev + xp);
+    setWd3Score(criteria);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 50);
     addXP(xp);
-    
-    logProgress({
-      studentName: progress.studentName,
-      studentId: progress.studentId,
-      event: 'You Do Challenge 2 Complete',
-      details: `Score: ${score}/5, XP: ${xp}`,
-      totalXP: progress.totalXP + xp,
-    });
-    
-    setTimeout(() => setYouDoTask(3), 2000);
+    setModuleXP(prev => prev + xp);
   };
 
-  const checkYouDo3 = () => {
-    const text = youDo3Text.toLowerCase();
-    const criteria = [
-      { name: 'Empathy/Apology', passed: text.includes('empath') || text.includes('apolog') },
-      { name: 'Discount Mentioned', passed: text.includes('10%') || text.includes('discount') || text.includes('compensation') },
-      { name: 'Brand Voice', passed: text.includes('brand voice') || text.includes('tone') || text.includes('sophisticated') },
-      { name: 'Personalization', passed: text.includes('template') || text.includes('personal') || text.includes('generic') },
-      { name: 'Sufficient Detail', passed: youDo3Text.split(/\s+/).length >= 60 },
-    ];
-    setYouDo3Score(criteria);
-    
-    const score = criteria.filter(c => c.passed).length;
-    const xp = score >= 4 ? 200 : score >= 2 ? 100 : 0;
-    setModuleXP(prev => prev + xp);
-    addXP(xp);
-    
-    logProgress({
-      studentName: progress.studentName,
-      studentId: progress.studentId,
-      event: 'You Do Challenge 3 Complete',
-      details: `Score: ${score}/5, XP: ${xp}`,
-      totalXP: progress.totalXP + xp,
-    });
-    
-    setTimeout(() => setEngageStage('final'), 2000);
+  const handleWd3Scaffold = (fields: Record<string, string>) => {
+    const parts = Object.values(fields).filter(Boolean);
+    if (parts.length) {
+      setWd3Txt(parts.join('. ') + '.');
+      setWd3Score(null);
+    }
   };
 
-  // Final Challenge
+  // You Do handlers
+  const handleYd1Submit = () => {
+    const t = yd1Txt.toLowerCase();
+    const criteria = [
+      { n: 'Role assigned', p: t.includes('act as') || t.includes('you are') || t.includes('as a') },
+      { n: 'Product named', p: t.includes('velara') || t.includes('midnight edit') },
+      { n: 'Word count specified', p: t.includes('150') || t.includes('word') },
+      { n: 'Brand voice included', p: t.includes('sophisticated') || t.includes('sustainable') || t.includes('british') || t.includes('elegant') },
+      { n: 'Output format clear', p: t.includes('description') || t.includes('paragraph') || t.includes('copy') },
+    ];
+    setYd1Score(criteria);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 100);
+    addXP(xp);
+    setModuleXP(prev => prev + xp);
+  };
+
+  const handleYd2Submit = () => {
+    const t = yd2Txt.toLowerCase();
+    const criteria = [
+      { n: 'Quantity specified', p: t.includes('5') || t.includes('five') },
+      { n: 'Character limit', p: t.includes('150') || t.includes('character') },
+      { n: 'Emoji requirement', p: t.includes('emoji') },
+      { n: 'Hashtag requirement', p: t.includes('hashtag') },
+      { n: 'Sufficient detail', p: wordCount(yd2Txt) >= 40 },
+    ];
+    setYd2Score(criteria);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 150);
+    addXP(xp);
+    setModuleXP(prev => prev + xp);
+  };
+
+  const handleYd3Submit = () => {
+    const t = yd3Txt.toLowerCase();
+    const criteria = [
+      { n: 'Empathy/apology', p: t.includes('empath') || t.includes('apolog') },
+      { n: 'Discount specified', p: t.includes('10%') || t.includes('discount') || t.includes('compensation') },
+      { n: 'Brand voice defined', p: t.includes('brand voice') || t.includes('tone') || t.includes('sophisticated') },
+      { n: 'Anti-template note', p: t.includes('template') || t.includes('personal') || t.includes('generic') || t.includes('human') },
+      { n: 'Sufficient detail', p: wordCount(yd3Txt) >= 50 },
+    ];
+    setYd3Score(criteria);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 200);
+    addXP(xp);
+    setModuleXP(prev => prev + xp);
+  };
+
+  // Final handler
   const handleFinalSubmit = async () => {
-    setIsSubmitting(true);
-    
-    const promptText = finalPrompt.toLowerCase();
-    const explainText = finalExplanation.toLowerCase();
-    
-    const promptCriteria = [
-      { name: 'Role Assigned', passed: promptText.includes('act as') || promptText.includes('you are') || promptText.includes('as a') },
-      { name: 'Board Mentioned', passed: promptText.includes('board') || promptText.includes('director') || promptText.includes('stakeholder') || promptText.includes('executive') },
-      { name: 'Sales Context', passed: promptText.includes('sales') || promptText.includes('revenue') || promptText.includes('performance') || promptText.includes('update') },
-      { name: 'Format Specified', passed: promptText.includes('bullet') || promptText.includes('section') || promptText.includes('summary') || promptText.includes('format') },
-      { name: 'Sufficient Length', passed: finalPrompt.split(/\s+/).length >= 40 },
+    const t = fp.toLowerCase();
+    const e = fe.toLowerCase();
+    const criteria = [
+      { n: 'Role assigned', p: t.includes('act as') || t.includes('you are') || t.includes('as a') },
+      { n: 'Board audience', p: t.includes('board') || t.includes('director') || t.includes('executive') || t.includes('stakeholder') },
+      { n: 'Sales context', p: t.includes('sales') || t.includes('revenue') || t.includes('performance') || t.includes('update') },
+      { n: 'Format specified', p: t.includes('bullet') || t.includes('section') || t.includes('summary') || t.includes('format') || t.includes('structure') },
+      { n: 'Prompt length', p: wordCount(fp) >= 35 },
+      { n: 'Problem identified', p: e.includes('missing') || e.includes('lack') || e.includes('vague') || e.includes('unclear') || e.includes('no ') },
+      { n: 'Improvement explained', p: e.includes('context') || e.includes('specific') || e.includes('detail') || e.includes('audience') || e.includes('role') || e.includes('framework') },
+      { n: 'Explanation depth', p: wordCount(fe) >= 25 },
     ];
-    
-    const explainCriteria = [
-      { name: 'Sufficient Explanation', passed: finalExplanation.split(/\s+/).length >= 30 },
-      { name: 'Problem Identified', passed: explainText.includes('missing') || explainText.includes('lack') || explainText.includes('vague') || explainText.includes('unclear') },
-      { name: 'Solution Explained', passed: explainText.includes('context') || explainText.includes('specific') || explainText.includes('detail') || explainText.includes('audience') },
-    ];
-    
-    const allCriteria = [...promptCriteria, ...explainCriteria];
-    setFinalScore(allCriteria);
-    
-    const totalScore = allCriteria.filter(c => c.passed).length;
-    const xp = totalScore >= 6 ? 250 : totalScore >= 4 ? 150 : 75;
-    setModuleXP(prev => prev + xp);
+    setFScore(criteria);
+    const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 250);
     addXP(xp);
-    
-    // Complete the module
+    setModuleXP(prev => prev + xp);
     completeModule2(1);
     addBadge('Prompt Specialist');
-    
+    setFDone(true);
+
     await logProgress({
       studentName: progress.studentName,
       studentId: progress.studentId,
       event: 'Module 1 Complete',
-      details: `Final score: ${totalScore}/8, Total XP earned: ${moduleXP + xp}`,
+      details: `Total XP earned: ${moduleXP + xp}`,
       totalXP: progress.totalXP + xp,
     });
-    
-    setIsSubmitting(false);
+
     setPhase('consolidate');
   };
+
+  // Prepare progress calculation
+  const prepareProgress = Math.min(90, Object.keys(mcqAnswers).length * 12 + (paper1Read ? 8 : 0) + (paper2Read ? 8 : 0) + (videosWatched.filter(Boolean).length * 6));
 
   // Loading state
   if (!isLoaded || !progress.studentName) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-[#08131E]">
         <div className="spinner" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#08131E]">
       {/* Header */}
-      <header className="bg-navy/95 border-b border-gold/30 sticky top-0 z-50 backdrop-blur">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push('/course2')}
-              className="text-slate-400 hover:text-white transition-colors text-sm"
-            >
-              ← Mission Board
-            </button>
-            <span className="text-slate-600">|</span>
-            <h1 className="text-white font-bold">Module 1: Prompt Engineering</h1>
+      <header className="bg-[rgba(8,19,30,0.97)] border-b border-[#1C3348] sticky top-0 z-50 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-5 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest border border-[#C9A84C] px-2 py-1 rounded">SWIPEUP</div>
+            <span className="font-semibold text-[13px] text-[#7A9AB5]">Module 01 — Prompt Engineering</span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-xs text-slate-400">XP this module</p>
-              <p className="text-gold font-bold">{moduleXP}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400">Total</p>
-              <p className="text-white font-bold">⭐ {progress.totalXP + moduleXP}</p>
-            </div>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[13px] font-bold text-[#C9A84C]">⭐ {progress.totalXP + moduleXP} XP</span>
+            <span className={cn(
+              "font-mono text-[10px] px-2 py-1 rounded tracking-wider",
+              mcqScore === 5 ? "border border-[#C9A84C] text-[#C9A84C] animate-pulse" : "border border-[#3D5870] text-[#3D5870]"
+            )}>
+              {mcqScore === 5 ? 'CLEARED' : 'UNCLEARED'}
+            </span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <PhaseIndicator currentPhase={phase} />
+      {/* Progress Bar */}
+      <ProgressBar 
+        phase={phase} 
+        prepareProgress={prepareProgress}
+        engageStage={engageStage}
+        weDoTask={weDoTask}
+        youDoTask={youDoTask}
+      />
 
+      {/* Phase Nav */}
+      <PhaseIndicator currentPhase={phase} />
+
+      <main className="max-w-[760px] mx-auto px-4 py-6 pb-24">
         {/* PREPARE PHASE */}
         {phase === 'prepare' && (
           <div className="animate-fade-in">
-            {/* Slack notification */}
-            <SlackMessage
-              from="Sarah Chen"
-              avatar="SC"
-              time="9:02 AM"
-              message="We need your help. Our marketing team has been using AI tools for three months and the output is embarrassing. Can you assess what's going wrong and fix it? I've cleared access to our intel files for your review. — Sarah"
-            />
-
-            {/* Intel Files Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <span>📁</span> Intel Files
-              </h2>
-              <span className="text-xs text-slate-500">Review all materials before the briefing</span>
+            {/* Transmission */}
+            <div className="bg-[#112030] border border-[#1C3348] border-l-[3px] border-l-[#C9A84C] rounded-r-lg p-5 mb-5">
+              <div className="flex items-center gap-2.5 flex-wrap mb-3">
+                <span className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest border border-[#C9A84C] px-2 py-0.5 rounded">INCOMING</span>
+                <span className="font-mono text-[10px] text-[#C9A84C]">Sarah Chen / MD Velara</span>
+                <span className="font-mono text-[10px] text-[#3D5870] ml-auto">09:02 TODAY</span>
+              </div>
+              <p className="text-[13px] text-[#9DBBD4] leading-relaxed">
+                We need your help — urgently. Our marketing team has been using AI for three months and the output is <strong className="text-white">embarrassing</strong>. Captions are generic, emails are completely off-brand, and nothing sounds like us. I&apos;ve cleared full intel access for you. <strong className="text-white">Review the files below, pass the security clearance check, and meet us inside HQ.</strong> — Sarah
+              </p>
             </div>
 
-            {/* Academic Papers */}
-            <div className="grid sm:grid-cols-2 gap-3 mb-6">
+            {/* Intel Files */}
+            <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3 flex items-center gap-2.5">
+              Intel Files
+              <span className="flex-1 h-px bg-[#1C3348]" />
+            </p>
+            <div className="grid grid-cols-2 gap-2.5 mb-5">
               <IntelFileCard
                 title="Kaplan & Haenlein (2019)"
-                subtitle="Business Horizons 62(1), pp.15-25 — 'Siri, Siri in my hand'"
+                subtitle='Business Horizons 62(1) — "Siri, Siri in my hand"'
                 read={paper1Read}
                 onToggle={() => setPaper1Read(!paper1Read)}
               />
               <IntelFileCard
                 title="Haenlein & Kaplan (2019)"
-                subtitle="California Management Review 61(4), pp.5-14 — 'A brief history of AI'"
+                subtitle='California Management Review 61(4) — "A brief history of AI"'
                 read={paper2Read}
                 onToggle={() => setPaper2Read(!paper2Read)}
               />
             </div>
 
-            {/* Briefing Videos */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <span>🎬</span> Briefing Videos
-              </h3>
-              <div className="grid sm:grid-cols-3 gap-3">
-                {videos.map((video, idx) => (
-                  <VideoCard
-                    key={idx}
-                    {...video}
-                    watched={videosWatched[idx]}
-                    onToggle={() => {
-                      const newWatched = [...videosWatched];
-                      newWatched[idx] = true;
-                      setVideosWatched(newWatched);
-                    }}
-                  />
-                ))}
-              </div>
+            {/* Videos */}
+            <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3 flex items-center gap-2.5">
+              Briefing Videos
+              <span className="flex-1 h-px bg-[#1C3348]" />
+            </p>
+            <div className="grid grid-cols-3 gap-2.5 mb-5">
+              {videos.map((video, idx) => (
+                <VideoCard
+                  key={idx}
+                  {...video}
+                  watched={videosWatched[idx]}
+                  onToggle={() => {
+                    const newWatched = [...videosWatched];
+                    newWatched[idx] = true;
+                    setVideosWatched(newWatched);
+                  }}
+                />
+              ))}
             </div>
 
-            {/* MCQ Gate */}
-            <MCQGate onComplete={handleMcqComplete} />
+            {/* MCQ */}
+            <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3 flex items-center gap-2.5">
+              Security Clearance Check
+              <span className="flex-1 h-px bg-[#1C3348]" />
+            </p>
+            <MCQGate
+              answers={mcqAnswers}
+              submitted={mcqSubmitted}
+              score={mcqScore}
+              onAnswer={(qi, oi) => handleMcqAnswer(qi, oi)}
+              onSubmit={handleMcqSubmit}
+              onRetry={handleMcqRetry}
+            />
           </div>
         )}
 
@@ -729,57 +1071,78 @@ export default function Module1Page() {
         {phase === 'engage' && (
           <div className="animate-fade-in">
             {/* HQ Banner */}
-            <div className="bg-navy border border-gold/30 rounded-lg p-3 mb-6 text-center">
-              <span className="text-gold text-sm font-medium">
-                📍 You are now inside Velara HQ — Marketing Department
-              </span>
+            <div className="bg-gradient-to-br from-[rgba(201,168,76,0.1)] to-[rgba(201,168,76,0.04)] border border-[rgba(201,168,76,0.3)] rounded-lg px-4.5 py-3 flex items-center justify-between mb-5">
+              <span className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest">📍 INSIDE VELARA HQ</span>
+              <span className="font-mono text-[10px] text-[#3D5870]">Marketing Dept · Floor 3</span>
+            </div>
+
+            {/* Stage Rail */}
+            <div className="flex gap-1.5 mb-5">
+              {[
+                { id: 'iDo', label: 'I Do' },
+                { id: 'weDo', label: 'We Do' },
+                { id: 'youDo', label: 'You Do' },
+                { id: 'final', label: 'Final' },
+              ].map((s, i) => {
+                const stages = ['iDo', 'weDo', 'youDo', 'final'];
+                const ci = stages.indexOf(engageStage);
+                return (
+                  <div
+                    key={s.id}
+                    className={cn(
+                      "flex-1 py-2.5 text-center font-mono text-[10px] tracking-widest uppercase rounded border transition-all",
+                      i < ci && "bg-[rgba(45,211,111,0.07)] border-[rgba(45,211,111,0.3)] text-[#2DD36F]",
+                      i === ci && "bg-[rgba(201,168,76,0.12)] border-[#C9A84C] text-[#C9A84C]",
+                      i > ci && "border-[#1C3348] text-[#3D5870]"
+                    )}
+                  >
+                    {s.label}
+                  </div>
+                );
+              })}
             </div>
 
             {/* I DO */}
             {engageStage === 'iDo' && (
-              <div>
-                <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-6 mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-2">I Do — Watch Marcus's Approach</h3>
-                  <p className="text-slate-400 text-sm mb-4">
-                    Watch how Senior Consultant Marcus Webb handled the same problem at a previous client.
-                  </p>
-                  
-                  {/* Video Placeholder */}
-                  <div className="w-full rounded-lg overflow-hidden border border-slate-700 mb-4">
-                    <iframe
-                      src="https://ulaw365-my.sharepoint.com/personal/abhirajsinh_thakor83_law_ac_uk/_layouts/15/embed.aspx?UniqueId=86ef4dee-b7c2-440f-849f-ef587752b1f5&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create"
-                      width="100%"
-                      height="500"
-                      frameBorder="0"
-                      scrolling="no"
-                      allowFullScreen
-                      title="Prompt Engineering - Marcus Webb Walkthrough"
-                    />
-                  </div>
-
-                  {/* Sign-off checkbox */}
-                  <label className={cn(
-                    "flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-all",
-                    iDoWatched ? "bg-green-500/10 border-green-500/50" : "bg-slate-800 border-slate-700 hover:border-gold/50"
-                  )}>
-                    <input
-                      type="checkbox"
-                      checked={iDoWatched}
-                      onChange={(e) => setIDoWatched(e.target.checked)}
-                      className="w-5 h-5 text-gold rounded"
-                    />
-                    <span className={cn("text-sm", iDoWatched ? "text-green-400" : "text-slate-300")}>
-                      ✓ I have reviewed Marcus's approach and am ready to proceed
-                    </span>
-                  </label>
+              <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">BRIEFING</span>
+                </div>
+                <h3 className="font-semibold text-[17px] text-white mb-2">I Do — Watch Marcus&apos;s Approach</h3>
+                <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
+                  Senior Consultant Marcus Webb handled the same problem at a previous client. Watch how he structures every prompt before you try it yourself.
+                </p>
+                
+                {/* Video */}
+                <div className="w-full aspect-video rounded border border-[#1C3348] bg-[#08131E] overflow-hidden mb-3.5">
+                  <iframe
+                    src="https://ulaw365-my.sharepoint.com/personal/abhirajsinh_thakor83_law_ac_uk/_layouts/15/embed.aspx?UniqueId=86ef4dee-b7c2-440f-849f-ef587752b1f5&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create"
+                    className="w-full h-full border-none"
+                    allowFullScreen
+                    title="Marcus Webb Walkthrough"
+                  />
                 </div>
 
-                {iDoWatched && (
+                {/* Checkbox */}
+                <label className={cn(
+                  "flex items-center gap-2.5 p-3 px-3.5 rounded border cursor-pointer transition-all",
+                  idoCheck ? "border-[rgba(45,211,111,0.4)] bg-[rgba(45,211,111,0.05)] text-[#2DD36F]" : "border-[#1C3348] bg-[#08131E] text-[#7A9AB5]"
+                )}>
+                  <input
+                    type="checkbox"
+                    checked={idoCheck}
+                    onChange={(e) => setIdoCheck(e.target.checked)}
+                    className="accent-[#C9A84C] w-4 h-4"
+                  />
+                  <span className="text-[12px]">I have watched Marcus&apos;s walkthrough and I&apos;m ready to practise</span>
+                </label>
+
+                {idoCheck && (
                   <button
                     onClick={() => setEngageStage('weDo')}
-                    className="w-full py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-all"
+                    className="w-full mt-3.5 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
                   >
-                    Proceed to We Do →
+                    BEGIN WE DO CHALLENGES →
                   </button>
                 )}
               </div>
@@ -788,125 +1151,241 @@ export default function Module1Page() {
             {/* WE DO */}
             {engageStage === 'weDo' && (
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2">We Do — Guided Practice</h3>
-                <p className="text-slate-400 text-sm mb-6">
-                  Tasks are arriving on your desk. Work through each one with Marcus's guidance.
-                </p>
+                {/* Step Dots */}
+                <div className="flex gap-1.5 mb-5">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className={cn(
+                      "flex-1 h-1 rounded transition-all",
+                      i < weDoTask && "bg-[#2DD36F]",
+                      i === weDoTask && "bg-[#C9A84C]",
+                      i > weDoTask && "bg-[#1C3348]"
+                    )} />
+                  ))}
+                </div>
 
-                {/* Task 1 */}
+                <h3 className="font-semibold text-[18px] text-white mb-1">We Do — Learn the Frameworks</h3>
+                <p className="text-[13px] text-[#7A9AB5] mb-5">Three frameworks, three tasks. Open the reference card, choose a framework, then apply it to the brief below.</p>
+
+                {/* Framework Card */}
+                <FrameworkCard
+                  activeFW={activeFW}
+                  setActiveFW={setActiveFW}
+                  isOpen={fwOpen}
+                  setIsOpen={setFwOpen}
+                  taskKey={weDoTask === 1 ? 'wd2' : 'wd3'}
+                />
+
+                {/* Task 1: Diagnose */}
                 {weDoTask === 1 && (
-                  <TaskCard title="Task 1: Diagnose the Problem" badge="Guided">
-                    <p className="text-slate-300 text-sm mb-4">
-                      Velara's marketing team wrote this prompt last week:
-                    </p>
-                    <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 mb-4 font-mono text-slate-200">
-                      "Write about our summer dress"
+                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">TASK 1 OF 3</span>
+                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">+20 XP</span>
                     </div>
-                    <p className="text-white text-sm mb-3">What is missing from this prompt? (Select all that apply)</p>
+                    <h4 className="font-semibold text-[17px] text-white mb-2">Diagnose the Broken Prompt</h4>
+                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
+                      Before writing prompts, you need to spot what&apos;s missing. Velara&apos;s team sent this last Monday. Using the frameworks above as your guide, identify every element that&apos;s absent — select all that apply.
+                    </p>
                     
-                    {['No role assigned to the AI', 'No output format specified', 'No brand context provided', 'No target audience mentioned'].map((opt) => (
+                    <div className="bg-[#08131E] border border-[#1C3348] rounded p-3.5 px-4 font-mono text-[13px] text-[#9DBBD4] mb-4 relative">
+                      <span className="absolute -top-2 left-3 text-[9px] font-bold tracking-widest text-[#3D5870] bg-[#112030] px-1.5">ORIGINAL PROMPT</span>
+                      &quot;Write about our summer dress&quot;
+                    </div>
+
+                    {WD_OPTS.map(opt => (
                       <label
                         key={opt}
                         className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all mb-2",
-                          weDo1Answers.includes(opt) ? "bg-gold/10 border-gold" : "bg-slate-800 border-slate-700 hover:border-gold/50"
+                          "flex items-center gap-2.5 p-2.5 px-3 border rounded cursor-pointer transition-all mb-1.5 text-[12px]",
+                          wd1Sel.includes(opt) ? "border-[#C9A84C] bg-[rgba(201,168,76,0.12)] text-white" : "border-[#1C3348] text-[#7A9AB5] hover:border-[rgba(201,168,76,0.4)] hover:bg-[rgba(201,168,76,0.12)]"
                         )}
                       >
                         <input
                           type="checkbox"
-                          checked={weDo1Answers.includes(opt)}
+                          checked={wd1Sel.includes(opt)}
                           onChange={() => {
-                            if (weDo1Answers.includes(opt)) {
-                              setWeDo1Answers(weDo1Answers.filter(a => a !== opt));
+                            if (wd1Sel.includes(opt)) {
+                              setWd1Sel(wd1Sel.filter(x => x !== opt));
                             } else {
-                              setWeDo1Answers([...weDo1Answers, opt]);
+                              setWd1Sel([...wd1Sel, opt]);
                             }
                           }}
+                          className="accent-[#C9A84C]"
                         />
-                        <span className="text-slate-300 text-sm">{opt}</span>
+                        {opt}
                       </label>
                     ))}
 
-                    <button
-                      onClick={handleWeDo1Submit}
-                      disabled={weDo1Answers.length < 4}
-                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
-                    >
-                      Submit Diagnosis
-                    </button>
-
-                    {weDo1Complete && (
-                      <div className="mt-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
-                        <p className="text-green-400 text-sm">Correct! All four elements are missing from this prompt. The AI has almost nothing to work with.</p>
-                      </div>
+                    {wd1Done ? (
+                      <>
+                        <div className="p-3.5 bg-[rgba(45,211,111,0.08)] border border-[rgba(45,211,111,0.25)] rounded text-[12px] text-[#2DD36F] leading-relaxed mt-3">
+                          <strong>All four correct.</strong> Map these back to any framework — CRAFT, CO-STAR, RISEN — and you&apos;ll see the same gaps: no role, no brand context, no audience, no format. That&apos;s why every output was generic.
+                        </div>
+                        <XPBurst amount={20} label="DIAGNOSIS COMPLETE" />
+                        <button
+                          onClick={() => setWeDoTask(2)}
+                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          CONTINUE TO TASK 2 →
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (WD_OPTS.every(o => wd1Sel.includes(o))) {
+                            setWd1Done(true);
+                            addXP(20);
+                            setModuleXP(prev => prev + 20);
+                          }
+                        }}
+                        disabled={wd1Sel.length < 4}
+                        className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        SUBMIT DIAGNOSIS
+                      </button>
                     )}
-                  </TaskCard>
+                  </div>
                 )}
 
-                {/* Task 2 */}
+                {/* Task 2: Instagram */}
                 {weDoTask === 2 && (
-                  <TaskCard title="Task 2: Rewrite the Prompt" badge="Guided">
-                    <p className="text-slate-300 text-sm mb-4">
-                      Velara's marketing team wrote this prompt:
-                    </p>
-                    <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 mb-4 font-mono text-slate-200">
-                      "Make our Instagram post good"
+                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">TASK 2 OF 3</span>
+                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">+25 XP</span>
                     </div>
-                    <p className="text-white text-sm mb-3">Rewrite this prompt to make it effective. Include a role, context, format, and goal.</p>
+                    <h4 className="font-semibold text-[17px] text-white mb-2">Rewrite the Instagram Prompt</h4>
+                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
+                      Choose a framework from the card above and apply it to improve this prompt. The reference card shows exactly how each letter maps to this task.
+                    </p>
                     
+                    <div className="bg-[#08131E] border border-[#1C3348] rounded p-3.5 px-4 font-mono text-[13px] text-[#9DBBD4] mb-4 relative">
+                      <span className="absolute -top-2 left-3 text-[9px] font-bold tracking-widest text-[#3D5870] bg-[#112030] px-1.5">ORIGINAL PROMPT</span>
+                      &quot;Make our Instagram post good&quot;
+                    </div>
+
                     <textarea
-                      value={weDo2Text}
-                      onChange={(e) => setWeDo2Text(e.target.value)}
-                      placeholder="Write your improved prompt here..."
-                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      value={wd2Txt}
+                      onChange={(e) => setWd2Txt(e.target.value)}
+                      placeholder="Choose CRAFT, CO-STAR, or RISEN above, then write your improved prompt here..."
+                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
                     />
+                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
+                      <span className={cn(
+                        "font-mono text-[10px]",
+                        wordCount(wd2Txt) >= 30 ? "text-[#2DD36F]" : "text-[#3D5870]"
+                      )}>
+                        {wordCount(wd2Txt)} words
+                      </span>
+                      <span className="font-mono text-[10px] text-[#3D5870]">AIM FOR 30+ WORDS</span>
+                    </div>
 
-                    {weDo2Score && (
-                      <div>
-                        <ScoreBreakdown criteria={weDo2Score} />
-                        <XPCounter amount={25} />
-                      </div>
+                    {wd2Score ? (
+                      <>
+                        <ScoreGrid criteria={wd2Score} />
+                        {wd2Score.filter(c => !c.p).length > 0 && wd2Score.filter(c => c.p).length < 4 && (
+                          <MissBox
+                            missed={wd2Score.filter(c => !c.p)}
+                            hints={{
+                              'Role assigned': 'Start with "Act as a social media copywriter for Velara"',
+                              'Platform context': 'Name the platform — Instagram — so the AI formats correctly',
+                              'Brand reference': 'Name the brand: Velara, and add 1-2 words about who they are',
+                              'Format specified': 'Specify the output: caption, under 150 characters, with hashtag',
+                              'Sufficient detail': 'Add tone, product details — aim for 30+ words total',
+                            }}
+                          />
+                        )}
+                        {wd2Score.filter(c => c.p).length < 4 && (
+                          <Scaffold task="wd2" activeFW={activeFW} onBuild={handleWd2Scaffold} />
+                        )}
+                        <XPBurst amount={xpForScore(wd2Score.filter(c => c.p).length, wd2Score.length, 25)} label="TASK SCORED" />
+                        {!wd2Done && (
+                          <button
+                            onClick={() => { setWd2Done(true); setWeDoTask(3); }}
+                            className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                          >
+                            CONTINUE TO TASK 3 →
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleWd2Submit}
+                        disabled={wordCount(wd2Txt) < 8}
+                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        SUBMIT PROMPT
+                      </button>
                     )}
-
-                    <button
-                      onClick={handleWeDo2Submit}
-                      disabled={weDo2Text.length < 10 || weDo2Score !== null}
-                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
-                    >
-                      Submit Prompt
-                    </button>
-                  </TaskCard>
+                  </div>
                 )}
 
-                {/* Task 3 */}
+                {/* Task 3: Complaint */}
                 {weDoTask === 3 && (
-                  <TaskCard title="Task 3: Customer Complaint Scenario" badge="Guided">
-                    <p className="text-slate-300 text-sm mb-4">
-                      Sarah Chen needs to respond to a customer complaint about a late delivery. Write a complete prompt that would get a professional, empathetic response.
+                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">TASK 3 OF 3</span>
+                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">+50 XP</span>
+                    </div>
+                    <h4 className="font-semibold text-[17px] text-white mb-2">Customer Complaint Response Prompt</h4>
+                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
+                      Apply a framework to write a prompt that generates a professional, empathetic reply to a late delivery complaint. The &quot;Apply to this task&quot; section in the framework card above shows exactly what to include.
                     </p>
-                    
+
                     <textarea
-                      value={weDo3Text}
-                      onChange={(e) => setWeDo3Text(e.target.value)}
-                      placeholder="Write your prompt for the customer complaint response..."
-                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      value={wd3Txt}
+                      onChange={(e) => setWd3Txt(e.target.value)}
+                      placeholder="Use RISEN for complex, multi-step responses. Use CRAFT or CO-STAR for tone-focused briefs. Your choice..."
+                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
                     />
+                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
+                      <span className={cn(
+                        "font-mono text-[10px]",
+                        wordCount(wd3Txt) >= 40 ? "text-[#2DD36F]" : "text-[#3D5870]"
+                      )}>
+                        {wordCount(wd3Txt)} words
+                      </span>
+                      <span className="font-mono text-[10px] text-[#3D5870]">AIM FOR 40+ WORDS</span>
+                    </div>
 
-                    {weDo3Score && (
-                      <div>
-                        <ScoreBreakdown criteria={weDo3Score} />
-                        <XPCounter amount={50} />
-                      </div>
+                    {wd3Score ? (
+                      <>
+                        <ScoreGrid criteria={wd3Score} />
+                        {wd3Score.filter(c => !c.p).length > 0 && wd3Score.filter(c => c.p).length < 4 && (
+                          <MissBox
+                            missed={wd3Score.filter(c => !c.p)}
+                            hints={{
+                              'Customer context': 'Describe the situation: a customer complained about a late delivery',
+                              'Empathy/tone': 'Specify: empathetic, apologetic, or professional tone',
+                              'Response format': 'Clarify: this is an email reply — tell it the format explicitly',
+                              'Brand voice': "Reference Velara's tone — sophisticated, warm, never corporate",
+                              'Sufficient detail': "Use a framework's full structure — more detail gives better output",
+                            }}
+                          />
+                        )}
+                        {wd3Score.filter(c => c.p).length < 4 && (
+                          <Scaffold task="wd3" activeFW={activeFW} onBuild={handleWd3Scaffold} />
+                        )}
+                        <XPBurst amount={xpForScore(wd3Score.filter(c => c.p).length, wd3Score.length, 50)} label="WE DO COMPLETE" />
+                        {!wd3Done && (
+                          <button
+                            onClick={() => { setWd3Done(true); setEngageStage('youDo'); }}
+                            className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                          >
+                            PROCEED TO YOU DO →
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleWd3Submit}
+                        disabled={wordCount(wd3Txt) < 8}
+                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        SUBMIT PROMPT
+                      </button>
                     )}
-
-                    <button
-                      onClick={handleWeDo3Submit}
-                      disabled={weDo3Text.length < 10 || weDo3Score !== null}
-                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
-                    >
-                      Submit Prompt
-                    </button>
-                  </TaskCard>
+                  </div>
                 )}
               </div>
             )}
@@ -914,106 +1393,175 @@ export default function Module1Page() {
             {/* YOU DO */}
             {engageStage === 'youDo' && (
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2">You Do — Solo Challenges</h3>
-                <p className="text-slate-400 text-sm mb-6">
-                  Three challenges of increasing difficulty. Apply what you've learned without guidance.
-                </p>
+                {/* Step Dots */}
+                <div className="flex gap-1.5 mb-5">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className={cn(
+                      "flex-1 h-1 rounded transition-all",
+                      i < youDoTask && "bg-[#2DD36F]",
+                      i === youDoTask && "bg-[#C9A84C]",
+                      i > youDoTask && "bg-[#1C3348]"
+                    )} />
+                  ))}
+                </div>
+
+                <h3 className="font-semibold text-[18px] text-white mb-1">You Do — Solo Challenges</h3>
+                <p className="text-[13px] text-[#7A9AB5] mb-5">Three real Velara briefs. No guided hints this time — apply the frameworks independently.</p>
 
                 {/* Challenge 1 */}
                 {youDoTask === 1 && (
-                  <TaskCard title="Quick Fix (Easy)" badge="100 XP">
-                    <p className="text-slate-300 text-sm mb-4">
-                      Velara is launching a new sustainable evening wear collection called <strong>The Midnight Edit</strong>. 
-                      Write a prompt that gets an AI to produce a 150-word product description in Velara's brand voice: sophisticated, sustainable, and British.
+                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">CHALLENGE 1 OF 3</span>
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(45,211,111,0.1)] text-[#2DD36F] border border-[rgba(45,211,111,0.25)] tracking-wider">EASY</span>
+                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">100 XP</span>
+                    </div>
+                    <h4 className="font-semibold text-[17px] text-white mb-2">The Midnight Edit — Product Description</h4>
+                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
+                      Velara is launching a sustainable evening wear collection called The Midnight Edit. Write a prompt that produces a 150-word product description in Velara&apos;s brand voice: sophisticated, sustainable, and British.
                     </p>
-                    
+
                     <textarea
-                      value={youDo1Text}
-                      onChange={(e) => setYouDo1Text(e.target.value)}
-                      placeholder="Write your prompt here..."
-                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      value={yd1Txt}
+                      onChange={(e) => setYd1Txt(e.target.value)}
+                      placeholder="Act as... Velara's Midnight Edit collection... 150-word description... brand voice: sophisticated, sustainable, British..."
+                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
                     />
+                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
+                      <span className={cn(
+                        "font-mono text-[10px]",
+                        wordCount(yd1Txt) >= 15 ? "text-[#2DD36F]" : "text-[#3D5870]"
+                      )}>
+                        {wordCount(yd1Txt)} words
+                      </span>
+                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 15 WORDS</span>
+                    </div>
 
-                    {youDo1Score && (
-                      <div>
-                        <ScoreBreakdown criteria={youDo1Score} />
-                        <XPCounter amount={youDo1Score.filter(c => c.passed).length >= 4 ? 100 : youDo1Score.filter(c => c.passed).length >= 2 ? 50 : 0} />
-                      </div>
+                    {yd1Score ? (
+                      <>
+                        <ScoreGrid criteria={yd1Score} />
+                        <XPBurst amount={xpForScore(yd1Score.filter(c => c.p).length, yd1Score.length, 100)} label="CHALLENGE SCORED" />
+                        <button
+                          onClick={() => setYouDoTask(2)}
+                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          NEXT CHALLENGE →
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleYd1Submit}
+                        disabled={wordCount(yd1Txt) < 6}
+                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        SUBMIT CHALLENGE
+                      </button>
                     )}
-
-                    <button
-                      onClick={checkYouDo1}
-                      disabled={youDo1Text.length < 10 || youDo1Score !== null}
-                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
-                    >
-                      Submit Challenge
-                    </button>
-                  </TaskCard>
+                  </div>
                 )}
 
                 {/* Challenge 2 */}
                 {youDoTask === 2 && (
-                  <TaskCard title="Client Presentation (Medium)" badge="150 XP">
-                    <p className="text-slate-300 text-sm mb-4">
-                      Velara's social media team needs to produce 5 Instagram captions every Monday. 
-                      Write a prompt that generates all 5 in one go. Each caption must be under 150 characters, include one relevant emoji, and end with a branded hashtag.
+                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">CHALLENGE 2 OF 3</span>
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(245,158,11,0.1)] text-[#F59E0B] border border-[rgba(245,158,11,0.25)] tracking-wider">MEDIUM</span>
+                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">150 XP</span>
+                    </div>
+                    <h4 className="font-semibold text-[17px] text-white mb-2">Monday Caption Machine</h4>
+                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
+                      Velara&apos;s social media team needs 5 Instagram captions every Monday morning. Write one prompt that generates all 5. Each caption: under 150 characters, one relevant emoji, branded hashtag.
                     </p>
-                    
+
                     <textarea
-                      value={youDo2Text}
-                      onChange={(e) => setYouDo2Text(e.target.value)}
-                      placeholder="Write your prompt here..."
-                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      value={yd2Txt}
+                      onChange={(e) => setYd2Txt(e.target.value)}
+                      placeholder="Specify: how many captions, character limit, emoji rule, hashtag requirement, brand voice..."
+                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
                     />
+                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
+                      <span className={cn(
+                        "font-mono text-[10px]",
+                        wordCount(yd2Txt) >= 40 ? "text-[#2DD36F]" : "text-[#3D5870]"
+                      )}>
+                        {wordCount(yd2Txt)} words
+                      </span>
+                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 40 WORDS</span>
+                    </div>
 
-                    {youDo2Score && (
-                      <div>
-                        <ScoreBreakdown criteria={youDo2Score} />
-                        <XPCounter amount={youDo2Score.filter(c => c.passed).length >= 4 ? 150 : youDo2Score.filter(c => c.passed).length >= 2 ? 75 : 0} />
-                      </div>
+                    {yd2Score ? (
+                      <>
+                        <ScoreGrid criteria={yd2Score} />
+                        <XPBurst amount={xpForScore(yd2Score.filter(c => c.p).length, yd2Score.length, 150)} label="CHALLENGE SCORED" />
+                        <button
+                          onClick={() => setYouDoTask(3)}
+                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          FINAL CHALLENGE →
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleYd2Submit}
+                        disabled={wordCount(yd2Txt) < 16}
+                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        SUBMIT CHALLENGE
+                      </button>
                     )}
-
-                    <button
-                      onClick={checkYouDo2}
-                      disabled={youDo2Text.length < 10 || youDo2Score !== null}
-                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
-                    >
-                      Submit Challenge
-                    </button>
-                  </TaskCard>
+                  </div>
                 )}
 
                 {/* Challenge 3 */}
                 {youDoTask === 3 && (
-                  <TaskCard title="Board-Level Decision (Hard)" badge="200 XP">
-                    <p className="text-slate-300 text-sm mb-4">
-                      Velara receives approximately 30 identical late delivery complaints every week. 
-                      The customer service team copies and pastes the same response. 
-                      Write a prompt that generates a response which is empathetic, offers a 10% discount code, maintains Velara's sophisticated brand voice, and does not sound like a template.
+                  <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">CHALLENGE 3 OF 3</span>
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(239,68,68,0.1)] text-[#EF4444] border border-[rgba(239,68,68,0.25)] tracking-wider">HARD</span>
+                      <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">200 XP</span>
+                    </div>
+                    <h4 className="font-semibold text-[17px] text-white mb-2">The Complaint That Keeps Coming Back</h4>
+                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
+                      Velara receives 30 identical late delivery complaints every week. Write a prompt that generates a response that is: empathetic, offers a 10% discount code, maintains Velara&apos;s sophisticated voice, and does not sound like a template.
                     </p>
-                    
+
                     <textarea
-                      value={youDo3Text}
-                      onChange={(e) => setYouDo3Text(e.target.value)}
-                      placeholder="Write your prompt here..."
-                      className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
+                      value={yd3Txt}
+                      onChange={(e) => setYd3Txt(e.target.value)}
+                      placeholder="This is the hard one. How do you prompt for 'sounds personal, not template'? Use RISEN for step-by-step control."
+                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
                     />
+                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
+                      <span className={cn(
+                        "font-mono text-[10px]",
+                        wordCount(yd3Txt) >= 50 ? "text-[#2DD36F]" : "text-[#3D5870]"
+                      )}>
+                        {wordCount(yd3Txt)} words
+                      </span>
+                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 50 WORDS</span>
+                    </div>
 
-                    {youDo3Score && (
-                      <div>
-                        <ScoreBreakdown criteria={youDo3Score} />
-                        <XPCounter amount={youDo3Score.filter(c => c.passed).length >= 4 ? 200 : youDo3Score.filter(c => c.passed).length >= 2 ? 100 : 0} />
-                      </div>
+                    {yd3Score ? (
+                      <>
+                        <ScoreGrid criteria={yd3Score} />
+                        <XPBurst amount={xpForScore(yd3Score.filter(c => c.p).length, yd3Score.length, 200)} label="CHALLENGE SCORED" />
+                        <button
+                          onClick={() => setEngageStage('final')}
+                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          PROCEED TO FINAL CHALLENGE →
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleYd3Submit}
+                        disabled={wordCount(yd3Txt) < 20}
+                        className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        SUBMIT CHALLENGE
+                      </button>
                     )}
-
-                    <button
-                      onClick={checkYouDo3}
-                      disabled={youDo3Text.length < 10 || youDo3Score !== null}
-                      className="mt-4 w-full py-2 bg-gold text-navy rounded-lg font-medium disabled:opacity-50"
-                    >
-                      Submit Challenge
-                    </button>
-                  </TaskCard>
+                  </div>
                 )}
               </div>
             )}
@@ -1021,66 +1569,86 @@ export default function Module1Page() {
             {/* FINAL CHALLENGE */}
             {engageStage === 'final' && (
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2">Final Challenge</h3>
-                <p className="text-slate-400 text-sm mb-6">
-                  Sarah Chen has forwarded you this prompt her PA wrote this morning.
-                </p>
+                <h3 className="font-semibold text-[18px] text-white mb-1">Final Challenge</h3>
+                <p className="text-[13px] text-[#7A9AB5] mb-5">Sarah Chen just forwarded you this from her PA. This is the last brief before you close the case.</p>
 
-                <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-6">
-                  <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 mb-6 font-mono text-slate-200 text-center text-lg">
-                    "Write email"
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className="font-mono text-[9px] font-bold px-2 py-1 rounded bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border border-[rgba(201,168,76,0.3)] tracking-wider">FINAL MISSION</span>
+                    <span className="font-mono text-[10px] text-[#C9A84C] ml-auto">+250 XP</span>
                   </div>
+                  <h4 className="font-semibold text-[17px] text-white mb-2">Board-Level Email — Rewrite &amp; Explain</h4>
 
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-white font-medium mb-2">
-                        Part 1: Rewrite this prompt properly so it produces a professional weekly sales update email for Velara's board of directors.
-                      </label>
-                      <textarea
-                        value={finalPrompt}
-                        onChange={(e) => setFinalPrompt(e.target.value)}
-                        placeholder="Write your rewritten prompt here..."
-                        className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
-                      />
+                  {/* Broken prompt */}
+                  <div className="text-center py-5 mb-4">
+                    <div className="inline-block bg-[#08131E] border border-[#1C3348] rounded px-6 py-3.5 font-mono text-[22px] text-white mb-3">
+                      &quot;Write email&quot;
                     </div>
-
-                    <div>
-                      <label className="block text-white font-medium mb-2">
-                        Part 2: In 2-3 sentences, explain what was wrong with the original prompt and why your version is better.
-                      </label>
-                      <textarea
-                        value={finalExplanation}
-                        onChange={(e) => setFinalExplanation(e.target.value)}
-                        placeholder="Write your explanation here..."
-                        className="w-full h-24 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 resize-none focus:border-gold"
-                      />
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                      {['NO ROLE', 'NO AUDIENCE', 'NO PURPOSE', 'NO FORMAT', 'NO CONTEXT'].map(tag => (
+                        <span key={tag} className="font-mono text-[9px] px-1.5 py-0.5 rounded tracking-wider bg-[rgba(239,68,68,0.1)] text-[#EF4444] border border-[rgba(239,68,68,0.2)]">{tag}</span>
+                      ))}
                     </div>
                   </div>
 
-                  {finalScore && (
-                    <div className="mt-6">
-                      <ScoreBreakdown criteria={finalScore} />
-                      <XPCounter amount={finalScore.filter(c => c.passed).length >= 6 ? 250 : finalScore.filter(c => c.passed).length >= 4 ? 150 : 75} />
-                    </div>
+                  {/* Part 1 */}
+                  <p className="font-mono text-[10px] font-bold text-[#7A9AB5] tracking-widest uppercase mb-2">Part 1: Rewrite for a professional weekly sales update email to Velara&apos;s board.</p>
+                  <textarea
+                    value={fp}
+                    onChange={(e) => setFp(e.target.value)}
+                    placeholder="Apply any of the three frameworks — your choice..."
+                    className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
+                  />
+                  <div className="flex items-center justify-between mt-1.5 mb-4">
+                    <span className={cn(
+                      "font-mono text-[10px]",
+                      wordCount(fp) >= 35 ? "text-[#2DD36F]" : "text-[#3D5870]"
+                    )}>
+                      {wordCount(fp)} words
+                    </span>
+                    <span className="font-mono text-[10px] text-[#3D5870]">MIN 35 WORDS</span>
+                  </div>
+
+                  {/* Part 2 */}
+                  <p className="font-mono text-[10px] font-bold text-[#7A9AB5] tracking-widest uppercase mb-2 mt-4">Part 2: In 2–3 sentences, explain what was wrong with the original and why your version is better.</p>
+                  <textarea
+                    value={fe}
+                    onChange={(e) => setFe(e.target.value)}
+                    placeholder="Name the framework you used and explain why it fixes the original prompt..."
+                    className="w-full min-h-[80px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
+                  />
+                  <div className="flex items-center justify-between mt-1.5 mb-3.5">
+                    <span className={cn(
+                      "font-mono text-[10px]",
+                      wordCount(fe) >= 25 ? "text-[#2DD36F]" : "text-[#3D5870]"
+                    )}>
+                      {wordCount(fe)} words
+                    </span>
+                    <span className="font-mono text-[10px] text-[#3D5870]">MIN 25 WORDS</span>
+                  </div>
+
+                  {fScore ? (
+                    <>
+                      <ScoreGrid criteria={fScore} />
+                      <XPBurst amount={xpForScore(fScore.filter(c => c.p).length, fScore.length, 250)} label="MISSION COMPLETE" />
+                      {!fDone && (
+                        <button
+                          onClick={() => setPhase('consolidate')}
+                          className="w-full mt-3 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          COMPLETE MODULE →
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleFinalSubmit}
+                      disabled={wordCount(fp) < 15 || wordCount(fe) < 10}
+                      className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      SUBMIT FINAL CHALLENGE
+                    </button>
                   )}
-
-                  <button
-                    onClick={handleFinalSubmit}
-                    disabled={(finalPrompt.length < 20 || finalExplanation.length < 20) && finalScore === null}
-                    className={cn(
-                      "mt-6 w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2",
-                      "bg-gold text-navy hover:bg-gold-light disabled:opacity-50"
-                    )}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <span className="spinner w-5 h-5" />
-                        Submitting...
-                      </>
-                    ) : (
-                      'Submit Final Challenge'
-                    )}
-                  </button>
                 </div>
               </div>
             )}
@@ -1091,73 +1659,65 @@ export default function Module1Page() {
         {phase === 'consolidate' && (
           <div className="animate-fade-in text-center">
             {/* Badge */}
-            <div className="mb-8">
-              <div className="inline-block relative">
-                <div className="w-32 h-32 bg-gradient-to-br from-gold to-gold-dark rounded-full flex items-center justify-center shadow-lg shadow-gold/30 animate-pulse-gold">
-                  <span className="text-5xl">🏅</span>
-                </div>
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-navy border border-gold px-4 py-1 rounded-full">
-                  <span className="text-gold font-bold text-sm">Prompt Specialist</span>
-                </div>
+            <div className="mb-6">
+              <div className="w-[110px] h-[110px] mx-auto rounded-full flex items-center justify-center text-5xl bg-[conic-gradient(#C9A84C,#E8C96A,#C9A84C)] shadow-[0_0_0_8px_rgba(201,168,76,0.1),0_0_40px_rgba(201,168,76,0.25)] animate-pulse">
+                🏅
               </div>
+              <span className="inline-block mt-4 bg-[rgba(201,168,76,0.12)] border border-[rgba(201,168,76,0.4)] text-[#C9A84C] font-mono text-[11px] font-bold px-4 py-1.5 rounded tracking-widest">
+                PROMPT SPECIALIST
+              </span>
             </div>
 
-            <h2 className="text-3xl font-bold text-white mb-2">Module Complete!</h2>
-            <p className="text-slate-400 mb-8">You have successfully completed the Prompt Engineering module.</p>
+            <h2 className="font-bold text-[26px] text-white mb-1">Mission Accomplished</h2>
+            <p className="text-[13px] text-[#7A9AB5] mb-5">Module 01 — Prompt Engineering — Complete</p>
 
-            {/* XP Stats */}
-            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-8">
-              <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                <p className="text-xs text-slate-500 mb-1">XP This Module</p>
-                <p className="text-2xl font-bold text-gold">{moduleXP}</p>
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-2.5 max-w-md mx-auto mb-5">
+              <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 text-center">
+                <p className="font-mono text-[26px] font-bold text-[#C9A84C]">{moduleXP}</p>
+                <p className="font-mono text-[9px] text-[#3D5870] tracking-widest uppercase mt-1">XP This Module</p>
               </div>
-              <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                <p className="text-xs text-slate-500 mb-1">Total XP</p>
-                <p className="text-2xl font-bold text-white">{progress.totalXP}</p>
+              <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 text-center">
+                <p className="font-mono text-[26px] font-bold text-white">{progress.totalXP}</p>
+                <p className="font-mono text-[9px] text-[#3D5870] tracking-widest uppercase mt-1">Total XP</p>
               </div>
             </div>
 
             {/* Academic Insight */}
-            <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-6 mb-6 text-left max-w-2xl mx-auto">
-              <h3 className="text-gold font-semibold mb-3 flex items-center gap-2">
-                <span>📚</span> Academic Insight
-              </h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Kaplan and Haenlein (2019) define AI as systems that simulate human cognitive functions such as learning and problem-solving. 
-                Your work in this module demonstrates how to effectively direct these cognitive functions through structured prompts. 
-                The five elements of effective prompting — role, context, format, goal, and detail — align with their framework for human-AI collaboration.
+            <div className="bg-[#112030] border border-[#1C3348] border-l-[3px] border-l-[#C9A84C] rounded-r-lg p-4.5 px-5 mb-3 text-left">
+              <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📚 Academic Debrief</p>
+              <p className="text-[12px] text-[#7A9AB5] leading-relaxed">
+                Kaplan and Haenlein (2019) define AI as systems that simulate human cognitive functions such as learning and problem-solving. The frameworks you used in this module — CRAFT, CO-STAR, RISEN — are structural tools for directing those cognitive functions deliberately. Role, context, format, goal, and detail are what separate useful AI output from generic noise.
               </p>
             </div>
 
             {/* Ethics Checkpoint */}
-            <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-6 mb-8 text-left max-w-2xl mx-auto">
-              <h3 className="text-red-400 font-semibold mb-3 flex items-center gap-2">
-                <span>⚖️</span> Ethics Checkpoint
-              </h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Before Velara deploys AI-generated content publicly — what are their disclosure obligations? 
-                Consider the ASA (Advertising Standards Authority) guidelines on AI-generated advertising and ULaw's AI Policy (2023). 
-                How might transparency requirements affect their marketing strategy?
+            <div className="bg-[rgba(239,68,68,0.04)] border border-[rgba(239,68,68,0.2)] rounded-lg p-4.5 px-5 mb-5 text-left">
+              <p className="font-mono text-[9px] font-bold text-[#EF9E9E] tracking-widest uppercase mb-2">⚖️ Ethics Checkpoint</p>
+              <p className="text-[12px] text-[#9DBBD4] leading-relaxed">
+                Before Velara deploys AI-generated content publicly — what are their disclosure obligations? Consider the ASA guidelines on AI-generated advertising and ULaw&apos;s AI Policy (2023). How might transparency requirements affect their marketing strategy?
               </p>
             </div>
 
-            {/* Navigation */}
+            {/* Return Button */}
             <button
               onClick={() => router.push('/course2')}
-              className="px-8 py-3 bg-gold text-navy rounded-lg font-semibold hover:bg-gold-light transition-all"
+              className="px-8 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
             >
-              Return to Mission Board →
+              RETURN TO MISSION BOARD →
             </button>
+
+            {!progress.course2ModulesCompleted.includes(2) && (
+              <p className="text-[#2DD36F] text-sm mt-4">✅ Module 2 is now unlocked!</p>
+            )}
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="py-6 px-4 mt-12 border-t border-slate-800">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-sm text-slate-500">
-            © 2025 SwipeUp AI Society • University of Law
-          </p>
+      <footer className="py-6 px-4 mt-12 border-t border-[#1C3348]">
+        <div className="max-w-[760px] mx-auto text-center">
+          <p className="text-[11px] text-[#3D5870]">© 2025 SwipeUp AI Society • University of Law</p>
         </div>
       </footer>
     </div>
