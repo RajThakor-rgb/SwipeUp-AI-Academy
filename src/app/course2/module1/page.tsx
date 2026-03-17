@@ -745,7 +745,7 @@ export default function Module1Page() {
                   </p>
                   
                   {/* Video Placeholder */}
-                  <div className="relative w-full rounded-lg overflow-hidden border border-slate-700 mb-4" style={{ paddingBottom: '56.25%, height: 0}}>
+                  <div className="relative w-full rounded-lg overflow-hidden border border-slate-700 mb-4" style={{ paddingBottom: '56.25%', height: 0}}>
                     <iframe
                       src="https://ulaw365-my.sharepoint.com/personal/abhirajsinh_thakor83_law_ac_uk/_layouts/15/embed.aspx?UniqueId=86ef4dee-b7c2-440f-849f-ef587752b1f5&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create"
                       width="100%"
