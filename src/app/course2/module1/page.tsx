@@ -18,6 +18,17 @@ interface MCQQuestion {
   correct: number;
 }
 
+interface SavedAnswers {
+  wd2Txt: string;
+  wd3Txt: string;
+  yd1Txt: string;
+  yd2Txt: string;
+  yd3Txt: string;
+  fp: string;
+  fe: string;
+  moduleXP: number;
+}
+
 // MCQ Questions
 const mcqQuestions: MCQQuestion[] = [
   {
@@ -212,7 +223,7 @@ function xpForScore(pass: number, total: number, max: number): number {
 }
 
 // Phase Progress Indicator Component
-function PhaseIndicator({ currentPhase }: { currentPhase: Phase }) {
+function PhaseIndicator({ currentPhase, onPhaseClick, isCompleted }: { currentPhase: Phase; onPhaseClick: (phase: Phase) => void; isCompleted: boolean }) {
   const phases = [
     { id: 'prepare', label: 'Prepare' },
     { id: 'engage', label: 'Engage' },
@@ -227,17 +238,24 @@ function PhaseIndicator({ currentPhase }: { currentPhase: Phase }) {
         const isPast = idx < currentIndex;
         
         return (
-          <div
+          <button
             key={phase.id}
+            onClick={() => {
+              if (isCompleted || isPast || isActive) {
+                onPhaseClick(phase.id as Phase);
+              }
+            }}
+            disabled={!isCompleted && !isPast && !isActive}
             className={cn(
               "flex-1 py-2.5 text-center font-mono text-[10px] tracking-widest uppercase border-r border-[#1C3348] last:border-r-0 transition-all",
               isActive && "bg-[rgba(201,168,76,0.12)] text-[#C9A84C] border-b-2 border-b-[#C9A84C]",
-              isPast && "text-[#2DD36F]",
-              !isActive && !isPast && "text-[#3D5870]"
+              isPast && "text-[#2DD36F] hover:bg-[rgba(45,211,111,0.05)] cursor-pointer",
+              !isActive && !isPast && "text-[#3D5870]",
+              !isCompleted && !isPast && !isActive && "cursor-not-allowed"
             )}
           >
             {phase.label}
-          </div>
+          </button>
         );
       })}
     </div>
@@ -342,20 +360,21 @@ function VideoCard({ title, duration, url, watched, onToggle }: { title: string;
 }
 
 // MCQ Gate Component
-function MCQGate({ answers, submitted, score, onAnswer, onSubmit, onRetry }: {
+function MCQGate({ answers, submitted, score, onAnswer, onSubmit, onRetry, isReviewMode }: {
   answers: Record<string, number>;
   submitted: boolean;
   score: number;
   onAnswer: (qi: number, oi: number) => void;
   onSubmit: () => void;
   onRetry: () => void;
+  isReviewMode: boolean;
 }) {
   return (
     <div className="bg-[#112030] border border-[#1C3348] rounded-lg overflow-hidden">
       {/* Header */}
       <div className="bg-[rgba(201,168,76,0.08)] border-b border-[#1C3348] px-4.5 py-3 flex items-center justify-between">
         <span className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest">🔐 CLEARANCE REQUIRED</span>
-        <span className="font-mono text-[10px] text-[#3D5870]">SCORE 5/5 TO ENTER HQ</span>
+        <span className="font-mono text-[10px] text-[#3D5870]">{isReviewMode ? 'REVIEW MODE' : 'SCORE 5/5 TO ENTER HQ'}</span>
       </div>
 
       {/* Questions */}
@@ -407,7 +426,7 @@ function MCQGate({ answers, submitted, score, onAnswer, onSubmit, onRetry }: {
             "p-3.5 rounded-md text-center font-mono text-[11px] font-bold tracking-wider mb-3.5",
             score === 5 ? "bg-[rgba(45,211,111,0.1)] border border-[rgba(45,211,111,0.3)] text-[#2DD36F]" : "bg-[rgba(201,168,76,0.08)] border border-[rgba(201,168,76,0.25)] text-[#C9A84C]"
           )}>
-            {score === 5 ? `ACCESS GRANTED — ${score}/5 CORRECT — PROCEEDING TO HQ` : `CLEARANCE DENIED — ${score}/5 — REVIEW INTEL AND RETRY`}
+            {score === 5 ? `ACCESS GRANTED — ${score}/5 CORRECT` : `CLEARANCE DENIED — ${score}/5 — REVIEW INTEL AND RETRY`}
           </div>
         )}
 
@@ -420,14 +439,14 @@ function MCQGate({ answers, submitted, score, onAnswer, onSubmit, onRetry }: {
           >
             SUBMIT FOR VERIFICATION
           </button>
-        ) : score < 5 && (
+        ) : score < 5 && !isReviewMode ? (
           <button
             onClick={onRetry}
             className="w-full py-2.5 bg-transparent border border-[#C9A84C] text-[#C9A84C] rounded-md font-mono text-[10px] font-bold tracking-widest uppercase hover:bg-[rgba(201,168,76,0.12)] transition-all"
           >
             RETRY CLEARANCE CHECK
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -709,6 +728,29 @@ function Scaffold({
   );
 }
 
+// Back Button Component
+function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1.5 text-[#7A9AB5] hover:text-[#C9A84C] transition-colors mb-4 text-[12px]"
+    >
+      <span className="text-[14px]">←</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+// Saved Answer Display Component
+function SavedAnswerDisplay({ label, answer }: { label: string; answer: string }) {
+  return (
+    <div className="bg-[#08131E] border border-[rgba(45,211,111,0.25)] rounded p-3.5 mb-3">
+      <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-2">YOUR ANSWER</p>
+      <p className="text-[13px] text-[#9DBBD4] leading-relaxed whitespace-pre-wrap">{answer || 'No answer saved'}</p>
+    </div>
+  );
+}
+
 // Main Module 1 Component
 export default function Module1Page() {
   const router = useRouter();
@@ -760,6 +802,35 @@ export default function Module1Page() {
   const [fScore, setFScore] = useState<{ n: string; p: boolean }[] | null>(null);
   const [fDone, setFDone] = useState(false);
 
+  // Review mode state
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [savedAnswers, setSavedAnswers] = useState<SavedAnswers | null>(null);
+
+  // Load saved answers from localStorage
+  const loadSavedAnswers = useCallback(() => {
+    try {
+      const saved = localStorage.getItem('swipeup-module1-answers');
+      if (saved) {
+        setSavedAnswers(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error('Error loading saved answers:', e);
+    }
+  }, []);
+
+  // Save answers to localStorage
+  const saveAnswers = useCallback((answers: Partial<SavedAnswers>) => {
+    try {
+      const existing = localStorage.getItem('swipeup-module1-answers');
+      const parsed = existing ? JSON.parse(existing) : {};
+      const updated = { ...parsed, ...answers, moduleXP };
+      localStorage.setItem('swipeup-module1-answers', JSON.stringify(updated));
+      setSavedAnswers(updated);
+    } catch (e) {
+      console.error('Error saving answers:', e);
+    }
+  }, [moduleXP]);
+
   // Redirect checks
   useEffect(() => {
     if (isLoaded && !progress.studentName) {
@@ -769,8 +840,11 @@ export default function Module1Page() {
 
   // Check if returning user - properly restore all state
   useEffect(() => {
+    loadSavedAnswers();
+    
     // If module is completed, show consolidate phase (review mode)
     if (progress.course2ModulesCompleted.includes(1)) {
+      setIsReviewMode(true);
       setMcqSubmitted(true);
       setMcqScore(5);
       setPaper1Read(true);
@@ -781,8 +855,22 @@ export default function Module1Page() {
       setWd1Sel(WD_OPTS);
       setWd2Done(true);
       setWd3Done(true);
+      
+      // Load saved answers
+      const saved = localStorage.getItem('swipeup-module1-answers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setWd2Txt(parsed.wd2Txt || '');
+        setWd3Txt(parsed.wd3Txt || '');
+        setYd1Txt(parsed.yd1Txt || '');
+        setYd2Txt(parsed.yd2Txt || '');
+        setYd3Txt(parsed.yd3Txt || '');
+        setFp(parsed.fp || '');
+        setFe(parsed.fe || '');
+        setModuleXP(parsed.moduleXP || 700);
+      }
+      
       setPhase('consolidate');
-      setModuleXP(700); // Approximate XP for completed module
     }
     // If prepare is completed but module not done, start at engage
     else if (progress.course2PrepareCompleted.includes(1)) {
@@ -793,7 +881,7 @@ export default function Module1Page() {
       setVideosWatched([true, true, true]);
       setPhase('engage');
     }
-  }, [progress.course2PrepareCompleted, progress.course2ModulesCompleted]);
+  }, [progress.course2PrepareCompleted, progress.course2ModulesCompleted, loadSavedAnswers]);
 
   // MCQ handlers
   const handleMcqAnswer = (qi: number, oi: number) => {
@@ -837,6 +925,7 @@ export default function Module1Page() {
     const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 25);
     addXP(xp);
     setModuleXP(prev => prev + xp);
+    saveAnswers({ wd2Txt });
   };
 
   const handleWd2Scaffold = (fields: Record<string, string>) => {
@@ -861,6 +950,7 @@ export default function Module1Page() {
     const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 50);
     addXP(xp);
     setModuleXP(prev => prev + xp);
+    saveAnswers({ wd3Txt });
   };
 
   const handleWd3Scaffold = (fields: Record<string, string>) => {
@@ -885,6 +975,7 @@ export default function Module1Page() {
     const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 100);
     addXP(xp);
     setModuleXP(prev => prev + xp);
+    saveAnswers({ yd1Txt });
   };
 
   const handleYd2Submit = () => {
@@ -900,6 +991,7 @@ export default function Module1Page() {
     const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 150);
     addXP(xp);
     setModuleXP(prev => prev + xp);
+    saveAnswers({ yd2Txt });
   };
 
   const handleYd3Submit = () => {
@@ -915,6 +1007,7 @@ export default function Module1Page() {
     const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 200);
     addXP(xp);
     setModuleXP(prev => prev + xp);
+    saveAnswers({ yd3Txt });
   };
 
   // Final handler
@@ -935,6 +1028,10 @@ export default function Module1Page() {
     const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 250);
     addXP(xp);
     setModuleXP(prev => prev + xp);
+    
+    // Save all final answers
+    saveAnswers({ fp, fe, moduleXP: moduleXP + xp });
+    
     completeModule2(1);
     addBadge('Prompt Specialist');
     setFDone(true);
@@ -968,14 +1065,25 @@ export default function Module1Page() {
       <header className="bg-[rgba(8,19,30,0.97)] border-b border-[#1C3348] sticky top-0 z-50 backdrop-blur-sm">
         <div className="flex items-center justify-between px-5 py-2.5">
           <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => router.push('/course2')}
+              className="text-[#7A9AB5] hover:text-[#C9A84C] transition-colors"
+            >
+              ← Back
+            </button>
             <div className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest border border-[#C9A84C] px-2 py-1 rounded">SWIPEUP</div>
             <span className="font-semibold text-[13px] text-[#7A9AB5]">Module 01 — Prompt Engineering</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="font-mono text-[13px] font-bold text-[#C9A84C]">⭐ {progress.totalXP + moduleXP} XP</span>
+            {isReviewMode && (
+              <span className="font-mono text-[9px] px-2 py-1 rounded tracking-wider bg-[rgba(45,211,111,0.1)] text-[#2DD36F] border border-[rgba(45,211,111,0.3)]">
+                REVIEW MODE
+              </span>
+            )}
             <span className={cn(
               "font-mono text-[10px] px-2 py-1 rounded tracking-wider",
-              mcqScore === 5 ? "border border-[#C9A84C] text-[#C9A84C] animate-pulse" : "border border-[#3D5870] text-[#3D5870]"
+              mcqScore === 5 ? "border border-[#C9A84C] text-[#C9A84C]" : "border border-[#3D5870] text-[#3D5870]"
             )}>
               {mcqScore === 5 ? 'CLEARED' : 'UNCLEARED'}
             </span>
@@ -993,12 +1101,15 @@ export default function Module1Page() {
       />
 
       {/* Phase Nav */}
-      <PhaseIndicator currentPhase={phase} />
+      <PhaseIndicator currentPhase={phase} onPhaseClick={setPhase} isCompleted={isReviewMode} />
 
       <main className="max-w-[760px] mx-auto px-4 py-6 pb-24">
         {/* PREPARE PHASE */}
         {phase === 'prepare' && (
           <div className="animate-fade-in">
+            {/* Back to Course Button */}
+            <BackButton onClick={() => router.push('/course2')} label="Back to Course" />
+            
             {/* Transmission */}
             <div className="bg-[#112030] border border-[#1C3348] border-l-[3px] border-l-[#C9A84C] rounded-r-lg p-5 mb-5">
               <div className="flex items-center gap-2.5 flex-wrap mb-3">
@@ -1063,6 +1174,7 @@ export default function Module1Page() {
               onAnswer={(qi, oi) => handleMcqAnswer(qi, oi)}
               onSubmit={handleMcqSubmit}
               onRetry={handleMcqRetry}
+              isReviewMode={isReviewMode}
             />
           </div>
         )}
@@ -1070,6 +1182,9 @@ export default function Module1Page() {
         {/* ENGAGE PHASE */}
         {phase === 'engage' && (
           <div className="animate-fade-in">
+            {/* Back Button */}
+            <BackButton onClick={() => setPhase('prepare')} label="Back to Prepare" />
+            
             {/* HQ Banner */}
             <div className="bg-gradient-to-br from-[rgba(201,168,76,0.1)] to-[rgba(201,168,76,0.04)] border border-[rgba(201,168,76,0.3)] rounded-lg px-4.5 py-3 flex items-center justify-between mb-5">
               <span className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest">📍 INSIDE VELARA HQ</span>
@@ -1087,17 +1202,24 @@ export default function Module1Page() {
                 const stages = ['iDo', 'weDo', 'youDo', 'final'];
                 const ci = stages.indexOf(engageStage);
                 return (
-                  <div
+                  <button
                     key={s.id}
+                    onClick={() => {
+                      if (i <= ci || isReviewMode) {
+                        setEngageStage(s.id as EngageStage);
+                      }
+                    }}
+                    disabled={i > ci && !isReviewMode}
                     className={cn(
                       "flex-1 py-2.5 text-center font-mono text-[10px] tracking-widest uppercase rounded border transition-all",
-                      i < ci && "bg-[rgba(45,211,111,0.07)] border-[rgba(45,211,111,0.3)] text-[#2DD36F]",
+                      i < ci && "bg-[rgba(45,211,111,0.07)] border-[rgba(45,211,111,0.3)] text-[#2DD36F] hover:bg-[rgba(45,211,111,0.1)] cursor-pointer",
                       i === ci && "bg-[rgba(201,168,76,0.12)] border-[#C9A84C] text-[#C9A84C]",
-                      i > ci && "border-[#1C3348] text-[#3D5870]"
+                      i > ci && !isReviewMode && "border-[#1C3348] text-[#3D5870] cursor-not-allowed",
+                      i > ci && isReviewMode && "border-[rgba(45,211,111,0.2)] text-[#2DD36F] cursor-pointer hover:bg-[rgba(45,211,111,0.05)]"
                     )}
                   >
                     {s.label}
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -1110,7 +1232,7 @@ export default function Module1Page() {
                 </div>
                 <h3 className="font-semibold text-[17px] text-white mb-2">I Do — Watch Marcus&apos;s Approach</h3>
                 <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-4">
-                  Senior Consultant Marcus Webb handled the same problem at a previous client. Watch how he structures every prompt before you try it yourself.
+                  Senior Consultant Marcus Webb handled the same problem at a previous client. Watch how he structures every prompt before you try it yourself. Pay attention to how he uses the CRAFT framework.
                 </p>
                 
                 {/* Video */}
@@ -1121,6 +1243,29 @@ export default function Module1Page() {
                     allowFullScreen
                     title="Marcus Webb Walkthrough"
                   />
+                </div>
+
+                {/* Key Takeaways */}
+                <div className="bg-[rgba(201,168,76,0.05)] border border-[rgba(201,168,76,0.15)] rounded p-4 mb-4">
+                  <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📝 KEY TAKEAWAYS</p>
+                  <ul className="text-[12px] text-[#9DBBD4] space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#C9A84C]">1.</span>
+                      <span><strong className="text-white">Role first:</strong> Always tell the AI who it should be before asking it to do anything</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#C9A84C]">2.</span>
+                      <span><strong className="text-white">Context matters:</strong> The more background you give, the more relevant the output</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#C9A84C]">3.</span>
+                      <span><strong className="text-white">Be specific:</strong> "Under 150 characters" is better than "short"</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#C9A84C]">4.</span>
+                      <span><strong className="text-white">Tone sets the voice:</strong> Professional vs casual changes everything</span>
+                    </li>
+                  </ul>
                 </div>
 
                 {/* Checkbox */}
@@ -1151,15 +1296,28 @@ export default function Module1Page() {
             {/* WE DO */}
             {engageStage === 'weDo' && (
               <div>
+                {/* Back Button */}
+                <BackButton onClick={() => setEngageStage('iDo')} label="Back to I Do" />
+                
                 {/* Step Dots */}
                 <div className="flex gap-1.5 mb-5">
                   {[1, 2, 3].map(i => (
-                    <div key={i} className={cn(
-                      "flex-1 h-1 rounded transition-all",
-                      i < weDoTask && "bg-[#2DD36F]",
-                      i === weDoTask && "bg-[#C9A84C]",
-                      i > weDoTask && "bg-[#1C3348]"
-                    )} />
+                    <button
+                      key={i}
+                      onClick={() => {
+                        if (i <= weDoTask || isReviewMode) {
+                          setWeDoTask(i);
+                        }
+                      }}
+                      disabled={i > weDoTask && !isReviewMode}
+                      className={cn(
+                        "flex-1 h-1.5 rounded transition-all",
+                        i < weDoTask && "bg-[#2DD36F]",
+                        i === weDoTask && "bg-[#C9A84C]",
+                        i > weDoTask && !isReviewMode && "bg-[#1C3348] cursor-not-allowed",
+                        i > weDoTask && isReviewMode && "bg-[#2DD36F] cursor-pointer"
+                      )}
+                    />
                   ))}
                 </div>
 
@@ -1264,11 +1422,19 @@ export default function Module1Page() {
                       &quot;Make our Instagram post good&quot;
                     </div>
 
+                    {isReviewMode && savedAnswers?.wd2Txt && (
+                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.wd2Txt} />
+                    )}
+
                     <textarea
                       value={wd2Txt}
                       onChange={(e) => setWd2Txt(e.target.value)}
                       placeholder="Choose CRAFT, CO-STAR, or RISEN above, then write your improved prompt here..."
-                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
+                      className={cn(
+                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
+                        isReviewMode && "opacity-75"
+                      )}
+                      readOnly={isReviewMode}
                     />
                     <div className="flex items-center justify-between mt-1.5 mb-3.5">
                       <span className={cn(
@@ -1280,7 +1446,7 @@ export default function Module1Page() {
                       <span className="font-mono text-[10px] text-[#3D5870]">AIM FOR 30+ WORDS</span>
                     </div>
 
-                    {wd2Score ? (
+                    {wd2Score && !isReviewMode ? (
                       <>
                         <ScoreGrid criteria={wd2Score} />
                         {wd2Score.filter(c => !c.p).length > 0 && wd2Score.filter(c => c.p).length < 4 && (
@@ -1308,7 +1474,7 @@ export default function Module1Page() {
                           </button>
                         )}
                       </>
-                    ) : (
+                    ) : !isReviewMode ? (
                       <button
                         onClick={handleWd2Submit}
                         disabled={wordCount(wd2Txt) < 8}
@@ -1316,6 +1482,21 @@ export default function Module1Page() {
                       >
                         SUBMIT PROMPT
                       </button>
+                    ) : (
+                      <div className="flex gap-2.5 mt-3">
+                        <button
+                          onClick={() => setWeDoTask(1)}
+                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
+                        >
+                          ← PREVIOUS TASK
+                        </button>
+                        <button
+                          onClick={() => setWeDoTask(3)}
+                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          NEXT TASK →
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1332,11 +1513,19 @@ export default function Module1Page() {
                       Apply a framework to write a prompt that generates a professional, empathetic reply to a late delivery complaint. The &quot;Apply to this task&quot; section in the framework card above shows exactly what to include.
                     </p>
 
+                    {isReviewMode && savedAnswers?.wd3Txt && (
+                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.wd3Txt} />
+                    )}
+
                     <textarea
                       value={wd3Txt}
                       onChange={(e) => setWd3Txt(e.target.value)}
                       placeholder="Use RISEN for complex, multi-step responses. Use CRAFT or CO-STAR for tone-focused briefs. Your choice..."
-                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
+                      className={cn(
+                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
+                        isReviewMode && "opacity-75"
+                      )}
+                      readOnly={isReviewMode}
                     />
                     <div className="flex items-center justify-between mt-1.5 mb-3.5">
                       <span className={cn(
@@ -1348,7 +1537,7 @@ export default function Module1Page() {
                       <span className="font-mono text-[10px] text-[#3D5870]">AIM FOR 40+ WORDS</span>
                     </div>
 
-                    {wd3Score ? (
+                    {wd3Score && !isReviewMode ? (
                       <>
                         <ScoreGrid criteria={wd3Score} />
                         {wd3Score.filter(c => !c.p).length > 0 && wd3Score.filter(c => c.p).length < 4 && (
@@ -1376,7 +1565,7 @@ export default function Module1Page() {
                           </button>
                         )}
                       </>
-                    ) : (
+                    ) : !isReviewMode ? (
                       <button
                         onClick={handleWd3Submit}
                         disabled={wordCount(wd3Txt) < 8}
@@ -1384,6 +1573,21 @@ export default function Module1Page() {
                       >
                         SUBMIT PROMPT
                       </button>
+                    ) : (
+                      <div className="flex gap-2.5 mt-3">
+                        <button
+                          onClick={() => setWeDoTask(2)}
+                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
+                        >
+                          ← PREVIOUS TASK
+                        </button>
+                        <button
+                          onClick={() => setEngageStage('youDo')}
+                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          NEXT SECTION →
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1393,15 +1597,28 @@ export default function Module1Page() {
             {/* YOU DO */}
             {engageStage === 'youDo' && (
               <div>
+                {/* Back Button */}
+                <BackButton onClick={() => setEngageStage('weDo')} label="Back to We Do" />
+                
                 {/* Step Dots */}
                 <div className="flex gap-1.5 mb-5">
                   {[1, 2, 3].map(i => (
-                    <div key={i} className={cn(
-                      "flex-1 h-1 rounded transition-all",
-                      i < youDoTask && "bg-[#2DD36F]",
-                      i === youDoTask && "bg-[#C9A84C]",
-                      i > youDoTask && "bg-[#1C3348]"
-                    )} />
+                    <button
+                      key={i}
+                      onClick={() => {
+                        if (i <= youDoTask || isReviewMode) {
+                          setYouDoTask(i);
+                        }
+                      }}
+                      disabled={i > youDoTask && !isReviewMode}
+                      className={cn(
+                        "flex-1 h-1.5 rounded transition-all",
+                        i < youDoTask && "bg-[#2DD36F]",
+                        i === youDoTask && "bg-[#C9A84C]",
+                        i > youDoTask && !isReviewMode && "bg-[#1C3348] cursor-not-allowed",
+                        i > youDoTask && isReviewMode && "bg-[#2DD36F] cursor-pointer"
+                      )}
+                    />
                   ))}
                 </div>
 
@@ -1421,11 +1638,19 @@ export default function Module1Page() {
                       Velara is launching a sustainable evening wear collection called The Midnight Edit. Write a prompt that produces a 150-word product description in Velara&apos;s brand voice: sophisticated, sustainable, and British.
                     </p>
 
+                    {isReviewMode && savedAnswers?.yd1Txt && (
+                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.yd1Txt} />
+                    )}
+
                     <textarea
                       value={yd1Txt}
                       onChange={(e) => setYd1Txt(e.target.value)}
                       placeholder="Act as... Velara's Midnight Edit collection... 150-word description... brand voice: sophisticated, sustainable, British..."
-                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
+                      className={cn(
+                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
+                        isReviewMode && "opacity-75"
+                      )}
+                      readOnly={isReviewMode}
                     />
                     <div className="flex items-center justify-between mt-1.5 mb-3.5">
                       <span className={cn(
@@ -1437,7 +1662,7 @@ export default function Module1Page() {
                       <span className="font-mono text-[10px] text-[#3D5870]">MIN 15 WORDS</span>
                     </div>
 
-                    {yd1Score ? (
+                    {yd1Score && !isReviewMode ? (
                       <>
                         <ScoreGrid criteria={yd1Score} />
                         <XPBurst amount={xpForScore(yd1Score.filter(c => c.p).length, yd1Score.length, 100)} label="CHALLENGE SCORED" />
@@ -1448,7 +1673,7 @@ export default function Module1Page() {
                           NEXT CHALLENGE →
                         </button>
                       </>
-                    ) : (
+                    ) : !isReviewMode ? (
                       <button
                         onClick={handleYd1Submit}
                         disabled={wordCount(yd1Txt) < 6}
@@ -1456,6 +1681,21 @@ export default function Module1Page() {
                       >
                         SUBMIT CHALLENGE
                       </button>
+                    ) : (
+                      <div className="flex gap-2.5 mt-3">
+                        <button
+                          onClick={() => setEngageStage('weDo')}
+                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
+                        >
+                          ← WE DO
+                        </button>
+                        <button
+                          onClick={() => setYouDoTask(2)}
+                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          NEXT CHALLENGE →
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1473,11 +1713,19 @@ export default function Module1Page() {
                       Velara&apos;s social media team needs 5 Instagram captions every Monday morning. Write one prompt that generates all 5. Each caption: under 150 characters, one relevant emoji, branded hashtag.
                     </p>
 
+                    {isReviewMode && savedAnswers?.yd2Txt && (
+                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.yd2Txt} />
+                    )}
+
                     <textarea
                       value={yd2Txt}
                       onChange={(e) => setYd2Txt(e.target.value)}
                       placeholder="Specify: how many captions, character limit, emoji rule, hashtag requirement, brand voice..."
-                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
+                      className={cn(
+                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
+                        isReviewMode && "opacity-75"
+                      )}
+                      readOnly={isReviewMode}
                     />
                     <div className="flex items-center justify-between mt-1.5 mb-3.5">
                       <span className={cn(
@@ -1489,7 +1737,7 @@ export default function Module1Page() {
                       <span className="font-mono text-[10px] text-[#3D5870]">MIN 40 WORDS</span>
                     </div>
 
-                    {yd2Score ? (
+                    {yd2Score && !isReviewMode ? (
                       <>
                         <ScoreGrid criteria={yd2Score} />
                         <XPBurst amount={xpForScore(yd2Score.filter(c => c.p).length, yd2Score.length, 150)} label="CHALLENGE SCORED" />
@@ -1500,7 +1748,7 @@ export default function Module1Page() {
                           FINAL CHALLENGE →
                         </button>
                       </>
-                    ) : (
+                    ) : !isReviewMode ? (
                       <button
                         onClick={handleYd2Submit}
                         disabled={wordCount(yd2Txt) < 16}
@@ -1508,6 +1756,21 @@ export default function Module1Page() {
                       >
                         SUBMIT CHALLENGE
                       </button>
+                    ) : (
+                      <div className="flex gap-2.5 mt-3">
+                        <button
+                          onClick={() => setYouDoTask(1)}
+                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
+                        >
+                          ← PREVIOUS
+                        </button>
+                        <button
+                          onClick={() => setYouDoTask(3)}
+                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          FINAL CHALLENGE →
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1525,11 +1788,19 @@ export default function Module1Page() {
                       Velara receives 30 identical late delivery complaints every week. Write a prompt that generates a response that is: empathetic, offers a 10% discount code, maintains Velara&apos;s sophisticated voice, and does not sound like a template.
                     </p>
 
+                    {isReviewMode && savedAnswers?.yd3Txt && (
+                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.yd3Txt} />
+                    )}
+
                     <textarea
                       value={yd3Txt}
                       onChange={(e) => setYd3Txt(e.target.value)}
                       placeholder="This is the hard one. How do you prompt for 'sounds personal, not template'? Use RISEN for step-by-step control."
-                      className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
+                      className={cn(
+                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
+                        isReviewMode && "opacity-75"
+                      )}
+                      readOnly={isReviewMode}
                     />
                     <div className="flex items-center justify-between mt-1.5 mb-3.5">
                       <span className={cn(
@@ -1541,7 +1812,7 @@ export default function Module1Page() {
                       <span className="font-mono text-[10px] text-[#3D5870]">MIN 50 WORDS</span>
                     </div>
 
-                    {yd3Score ? (
+                    {yd3Score && !isReviewMode ? (
                       <>
                         <ScoreGrid criteria={yd3Score} />
                         <XPBurst amount={xpForScore(yd3Score.filter(c => c.p).length, yd3Score.length, 200)} label="CHALLENGE SCORED" />
@@ -1552,7 +1823,7 @@ export default function Module1Page() {
                           PROCEED TO FINAL CHALLENGE →
                         </button>
                       </>
-                    ) : (
+                    ) : !isReviewMode ? (
                       <button
                         onClick={handleYd3Submit}
                         disabled={wordCount(yd3Txt) < 20}
@@ -1560,6 +1831,21 @@ export default function Module1Page() {
                       >
                         SUBMIT CHALLENGE
                       </button>
+                    ) : (
+                      <div className="flex gap-2.5 mt-3">
+                        <button
+                          onClick={() => setYouDoTask(2)}
+                          className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
+                        >
+                          ← PREVIOUS
+                        </button>
+                        <button
+                          onClick={() => setEngageStage('final')}
+                          className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                        >
+                          FINAL CHALLENGE →
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1569,6 +1855,9 @@ export default function Module1Page() {
             {/* FINAL CHALLENGE */}
             {engageStage === 'final' && (
               <div>
+                {/* Back Button */}
+                <BackButton onClick={() => setEngageStage('youDo')} label="Back to You Do" />
+                
                 <h3 className="font-semibold text-[18px] text-white mb-1">Final Challenge</h3>
                 <p className="text-[13px] text-[#7A9AB5] mb-5">Sarah Chen just forwarded you this from her PA. This is the last brief before you close the case.</p>
 
@@ -1579,55 +1868,105 @@ export default function Module1Page() {
                   </div>
                   <h4 className="font-semibold text-[17px] text-white mb-2">Board-Level Email — Rewrite &amp; Explain</h4>
 
-                  {/* Broken prompt */}
-                  <div className="text-center py-5 mb-4">
-                    <div className="inline-block bg-[#08131E] border border-[#1C3348] rounded px-6 py-3.5 font-mono text-[22px] text-white mb-3">
+                  {/* Context - What happened */}
+                  <div className="bg-[rgba(239,68,68,0.04)] border border-[rgba(239,68,68,0.15)] rounded p-4 mb-4">
+                    <p className="font-mono text-[9px] font-bold text-[#EF9E9E] tracking-widest uppercase mb-2">📨 WHAT HAPPENED</p>
+                    <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                      Sarah Chen&apos;s PA sent this prompt to ChatGPT on Monday morning, hoping for a professional weekly sales update email for the board of directors. Here&apos;s what they typed:
+                    </p>
+                    <div className="bg-[#08131E] border border-[#1C3348] rounded p-3.5 px-4 font-mono text-[15px] text-white text-center mb-3">
                       &quot;Write email&quot;
                     </div>
-                    <div className="flex flex-wrap justify-center gap-1.5">
-                      {['NO ROLE', 'NO AUDIENCE', 'NO PURPOSE', 'NO FORMAT', 'NO CONTEXT'].map(tag => (
-                        <span key={tag} className="font-mono text-[9px] px-1.5 py-0.5 rounded tracking-wider bg-[rgba(239,68,68,0.1)] text-[#EF4444] border border-[rgba(239,68,68,0.2)]">{tag}</span>
+                    <p className="text-[12px] text-[#7A9AB5] leading-relaxed">
+                      <strong className="text-[#EF9E9E]">The result?</strong> ChatGPT produced a generic, one-sentence placeholder with no context about Velara, no sales data, no board-level formatting, and no brand voice. Sarah was embarrassed when she had to manually rewrite it before the 9 AM meeting.
+                    </p>
+                  </div>
+
+                  {/* What went wrong */}
+                  <div className="bg-[rgba(201,168,76,0.05)] border border-[rgba(201,168,76,0.15)] rounded p-4 mb-4">
+                    <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">🔍 WHAT WENT WRONG</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: 'NO ROLE', desc: 'AI didn\'t know who to be' },
+                        { label: 'NO AUDIENCE', desc: 'Who is this email for?' },
+                        { label: 'NO CONTEXT', desc: 'What is Velara? What industry?' },
+                        { label: 'NO PURPOSE', desc: 'Sales update? Crisis? Celebration?' },
+                        { label: 'NO FORMAT', desc: 'How should it be structured?' },
+                        { label: 'NO TONE', desc: 'Professional? Casual? Urgent?' },
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 p-2 bg-[#08131E] rounded border border-[#1C3348]">
+                          <span className="font-mono text-[9px] font-bold text-[#EF9E9E] tracking-wider">{item.label}</span>
+                          <span className="text-[11px] text-[#7A9AB5]">{item.desc}</span>
+                        </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Part 1 */}
-                  <p className="font-mono text-[10px] font-bold text-[#7A9AB5] tracking-widest uppercase mb-2">Part 1: Rewrite for a professional weekly sales update email to Velara&apos;s board.</p>
-                  <textarea
-                    value={fp}
-                    onChange={(e) => setFp(e.target.value)}
-                    placeholder="Apply any of the three frameworks — your choice..."
-                    className="w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
-                  />
-                  <div className="flex items-center justify-between mt-1.5 mb-4">
-                    <span className={cn(
-                      "font-mono text-[10px]",
-                      wordCount(fp) >= 35 ? "text-[#2DD36F]" : "text-[#3D5870]"
-                    )}>
-                      {wordCount(fp)} words
-                    </span>
-                    <span className="font-mono text-[10px] text-[#3D5870]">MIN 35 WORDS</span>
+                  <div className="border-t border-[#1C3348] pt-4 mt-4">
+                    <p className="font-mono text-[10px] font-bold text-[#7A9AB5] tracking-widest uppercase mb-2">PART 1: Write the Improved Prompt</p>
+                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-3">
+                      Write a prompt that will produce a professional weekly sales update email for Velara&apos;s Board of Directors. Apply one of the three frameworks you learned. The email should include: a subject line, 3-bullet summary of key metrics, one notable highlight, and one strategic recommendation.
+                    </p>
+                    
+                    {isReviewMode && savedAnswers?.fp && (
+                      <SavedAnswerDisplay label="Your Previous Answer" answer={savedAnswers.fp} />
+                    )}
+
+                    <textarea
+                      value={fp}
+                      onChange={(e) => setFp(e.target.value)}
+                      placeholder="Apply CRAFT, CO-STAR, or RISEN — structure your prompt to address all six missing elements..."
+                      className={cn(
+                        "w-full min-h-[110px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
+                        isReviewMode && "opacity-75"
+                      )}
+                      readOnly={isReviewMode}
+                    />
+                    <div className="flex items-center justify-between mt-1.5 mb-4">
+                      <span className={cn(
+                        "font-mono text-[10px]",
+                        wordCount(fp) >= 35 ? "text-[#2DD36F]" : "text-[#3D5870]"
+                      )}>
+                        {wordCount(fp)} words
+                      </span>
+                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 35 WORDS</span>
+                    </div>
                   </div>
 
                   {/* Part 2 */}
-                  <p className="font-mono text-[10px] font-bold text-[#7A9AB5] tracking-widest uppercase mb-2 mt-4">Part 2: In 2–3 sentences, explain what was wrong with the original and why your version is better.</p>
-                  <textarea
-                    value={fe}
-                    onChange={(e) => setFe(e.target.value)}
-                    placeholder="Name the framework you used and explain why it fixes the original prompt..."
-                    className="w-full min-h-[80px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]"
-                  />
-                  <div className="flex items-center justify-between mt-1.5 mb-3.5">
-                    <span className={cn(
-                      "font-mono text-[10px]",
-                      wordCount(fe) >= 25 ? "text-[#2DD36F]" : "text-[#3D5870]"
-                    )}>
-                      {wordCount(fe)} words
-                    </span>
-                    <span className="font-mono text-[10px] text-[#3D5870]">MIN 25 WORDS</span>
+                  <div className="border-t border-[#1C3348] pt-4 mt-4">
+                    <p className="font-mono text-[10px] font-bold text-[#7A9AB5] tracking-widest uppercase mb-2">PART 2: Explain Your Improvement</p>
+                    <p className="text-[13px] text-[#7A9AB5] leading-relaxed mb-3">
+                      In 2–3 sentences, explain what was wrong with the original prompt and how your version fixes each problem.
+                    </p>
+                    
+                    {isReviewMode && savedAnswers?.fe && (
+                      <SavedAnswerDisplay label="Your Previous Explanation" answer={savedAnswers.fe} />
+                    )}
+
+                    <textarea
+                      value={fe}
+                      onChange={(e) => setFe(e.target.value)}
+                      placeholder="The original prompt failed because... My improved version addresses this by..."
+                      className={cn(
+                        "w-full min-h-[80px] p-3.5 px-4 bg-[#08131E] border border-[#1C3348] rounded text-[13px] text-white leading-relaxed resize-y outline-none focus:border-[rgba(201,168,76,0.5)] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.06)] transition-all placeholder:text-[#3D5870]",
+                        isReviewMode && "opacity-75"
+                      )}
+                      readOnly={isReviewMode}
+                    />
+                    <div className="flex items-center justify-between mt-1.5 mb-3.5">
+                      <span className={cn(
+                        "font-mono text-[10px]",
+                        wordCount(fe) >= 25 ? "text-[#2DD36F]" : "text-[#3D5870]"
+                      )}>
+                        {wordCount(fe)} words
+                      </span>
+                      <span className="font-mono text-[10px] text-[#3D5870]">MIN 25 WORDS</span>
+                    </div>
                   </div>
 
-                  {fScore ? (
+                  {fScore && !isReviewMode ? (
                     <>
                       <ScoreGrid criteria={fScore} />
                       <XPBurst amount={xpForScore(fScore.filter(c => c.p).length, fScore.length, 250)} label="MISSION COMPLETE" />
@@ -1640,7 +1979,7 @@ export default function Module1Page() {
                         </button>
                       )}
                     </>
-                  ) : (
+                  ) : !isReviewMode ? (
                     <button
                       onClick={handleFinalSubmit}
                       disabled={wordCount(fp) < 15 || wordCount(fe) < 10}
@@ -1648,6 +1987,21 @@ export default function Module1Page() {
                     >
                       SUBMIT FINAL CHALLENGE
                     </button>
+                  ) : (
+                    <div className="flex gap-2.5 mt-3">
+                      <button
+                        onClick={() => setEngageStage('youDo')}
+                        className="flex-1 py-3 border border-[#1C3348] text-[#7A9AB5] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:border-[rgba(201,168,76,0.4)] hover:text-[#C9A84C] transition-all"
+                      >
+                        ← YOU DO
+                      </button>
+                      <button
+                        onClick={() => setPhase('consolidate')}
+                        className="flex-1 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 transition-all"
+                      >
+                        VIEW SUMMARY →
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1657,59 +2011,114 @@ export default function Module1Page() {
 
         {/* CONSOLIDATE PHASE */}
         {phase === 'consolidate' && (
-          <div className="animate-fade-in text-center">
-            {/* Badge */}
-            <div className="mb-6">
-              <div className="w-[110px] h-[110px] mx-auto rounded-full flex items-center justify-center text-5xl bg-[conic-gradient(#C9A84C,#E8C96A,#C9A84C)] shadow-[0_0_0_8px_rgba(201,168,76,0.1),0_0_40px_rgba(201,168,76,0.25)] animate-pulse">
-                🏅
-              </div>
-              <span className="inline-block mt-4 bg-[rgba(201,168,76,0.12)] border border-[rgba(201,168,76,0.4)] text-[#C9A84C] font-mono text-[11px] font-bold px-4 py-1.5 rounded tracking-widest">
-                PROMPT SPECIALIST
-              </span>
-            </div>
-
-            <h2 className="font-bold text-[26px] text-white mb-1">Mission Accomplished</h2>
-            <p className="text-[13px] text-[#7A9AB5] mb-5">Module 01 — Prompt Engineering — Complete</p>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-2.5 max-w-md mx-auto mb-5">
-              <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 text-center">
-                <p className="font-mono text-[26px] font-bold text-[#C9A84C]">{moduleXP}</p>
-                <p className="font-mono text-[9px] text-[#3D5870] tracking-widest uppercase mt-1">XP This Module</p>
-              </div>
-              <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 text-center">
-                <p className="font-mono text-[26px] font-bold text-white">{progress.totalXP}</p>
-                <p className="font-mono text-[9px] text-[#3D5870] tracking-widest uppercase mt-1">Total XP</p>
-              </div>
-            </div>
-
-            {/* Academic Insight */}
-            <div className="bg-[#112030] border border-[#1C3348] border-l-[3px] border-l-[#C9A84C] rounded-r-lg p-4.5 px-5 mb-3 text-left">
-              <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📚 Academic Debrief</p>
-              <p className="text-[12px] text-[#7A9AB5] leading-relaxed">
-                Kaplan and Haenlein (2019) define AI as systems that simulate human cognitive functions such as learning and problem-solving. The frameworks you used in this module — CRAFT, CO-STAR, RISEN — are structural tools for directing those cognitive functions deliberately. Role, context, format, goal, and detail are what separate useful AI output from generic noise.
-              </p>
-            </div>
-
-            {/* Ethics Checkpoint */}
-            <div className="bg-[rgba(239,68,68,0.04)] border border-[rgba(239,68,68,0.2)] rounded-lg p-4.5 px-5 mb-5 text-left">
-              <p className="font-mono text-[9px] font-bold text-[#EF9E9E] tracking-widest uppercase mb-2">⚖️ Ethics Checkpoint</p>
-              <p className="text-[12px] text-[#9DBBD4] leading-relaxed">
-                Before Velara deploys AI-generated content publicly — what are their disclosure obligations? Consider the ASA guidelines on AI-generated advertising and ULaw&apos;s AI Policy (2023). How might transparency requirements affect their marketing strategy?
-              </p>
-            </div>
-
-            {/* Return Button */}
-            <button
-              onClick={() => router.push('/course2')}
-              className="px-8 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
-            >
-              RETURN TO MISSION BOARD →
-            </button>
-
-            {!progress.course2ModulesCompleted.includes(2) && (
-              <p className="text-[#2DD36F] text-sm mt-4">✅ Module 2 is now unlocked!</p>
+          <div className="animate-fade-in">
+            {/* Back Button */}
+            {isReviewMode && (
+              <BackButton onClick={() => setPhase('engage')} label="Back to Engage" />
             )}
+            
+            <div className="text-center">
+              {/* Badge */}
+              <div className="mb-6">
+                <div className="w-[110px] h-[110px] mx-auto rounded-full flex items-center justify-center text-5xl bg-[conic-gradient(#C9A84C,#E8C96A,#C9A84C)] shadow-[0_0_0_8px_rgba(201,168,76,0.1),0_0_40px_rgba(201,168,76,0.25)] animate-pulse">
+                  🏅
+                </div>
+                <span className="inline-block mt-4 bg-[rgba(201,168,76,0.12)] border border-[rgba(201,168,76,0.4)] text-[#C9A84C] font-mono text-[11px] font-bold px-4 py-1.5 rounded tracking-widest">
+                  PROMPT SPECIALIST
+                </span>
+              </div>
+
+              <h2 className="font-bold text-[26px] text-white mb-1">Mission Accomplished</h2>
+              <p className="text-[13px] text-[#7A9AB5] mb-5">Module 01 — Prompt Engineering — Complete</p>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-2.5 max-w-md mx-auto mb-5">
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 text-center">
+                  <p className="font-mono text-[26px] font-bold text-[#C9A84C]">{savedAnswers?.moduleXP || moduleXP}</p>
+                  <p className="font-mono text-[9px] text-[#3D5870] tracking-widest uppercase mt-1">XP This Module</p>
+                </div>
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 text-center">
+                  <p className="font-mono text-[26px] font-bold text-white">{progress.totalXP}</p>
+                  <p className="font-mono text-[9px] text-[#3D5870] tracking-widest uppercase mt-1">Total XP</p>
+                </div>
+              </div>
+
+              {/* Your Answers Summary */}
+              {isReviewMode && savedAnswers && (
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-5 mb-5 text-left">
+                  <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest uppercase mb-4">📝 YOUR SAVED ANSWERS</p>
+                  
+                  <div className="space-y-4">
+                    {savedAnswers.wd2Txt && (
+                      <div>
+                        <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-1">WE DO - INSTAGRAM PROMPT</p>
+                        <p className="text-[12px] text-[#9DBBD4] leading-relaxed line-clamp-2">{savedAnswers.wd2Txt}</p>
+                      </div>
+                    )}
+                    {savedAnswers.wd3Txt && (
+                      <div>
+                        <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-1">WE DO - COMPLAINT PROMPT</p>
+                        <p className="text-[12px] text-[#9DBBD4] leading-relaxed line-clamp-2">{savedAnswers.wd3Txt}</p>
+                      </div>
+                    )}
+                    {savedAnswers.fp && (
+                      <div>
+                        <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-1">FINAL - BOARD EMAIL PROMPT</p>
+                        <p className="text-[12px] text-[#9DBBD4] leading-relaxed line-clamp-2">{savedAnswers.fp}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Academic Insight */}
+              <div className="bg-[#112030] border border-[#1C3348] border-l-[3px] border-l-[#C9A84C] rounded-r-lg p-4.5 px-5 mb-3 text-left">
+                <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📚 Academic Debrief</p>
+                <p className="text-[12px] text-[#7A9AB5] leading-relaxed">
+                  Kaplan and Haenlein (2019) define AI as systems that simulate human cognitive functions such as learning and problem-solving. The frameworks you used in this module — CRAFT, CO-STAR, RISEN — are structural tools for directing those cognitive functions deliberately. Role, context, format, goal, and detail are what separate useful AI output from generic noise.
+                </p>
+              </div>
+
+              {/* Industry Application */}
+              <div className="bg-[rgba(45,211,111,0.04)] border border-[rgba(45,211,111,0.2)] rounded-lg p-4.5 px-5 mb-3 text-left">
+                <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-2">💼 Industry Application</p>
+                <p className="text-[12px] text-[#9DBBD4] leading-relaxed">
+                  In your future career, you&apos;ll use these frameworks daily: marketing teams use CRAFT for campaign copy, legal teams use RISEN for contract analysis, and executive assistants use CO-STAR for stakeholder communications. The ability to structure AI prompts effectively is now a core professional skill across every industry.
+                </p>
+              </div>
+
+              {/* Ethics Checkpoint */}
+              <div className="bg-[rgba(239,68,68,0.04)] border border-[rgba(239,68,68,0.2)] rounded-lg p-4.5 px-5 mb-5 text-left">
+                <p className="font-mono text-[9px] font-bold text-[#EF9E9E] tracking-widest uppercase mb-2">⚖️ Ethics Checkpoint</p>
+                <p className="text-[12px] text-[#9DBBD4] leading-relaxed">
+                  Before Velara deploys AI-generated content publicly — what are their disclosure obligations? Consider the ASA guidelines on AI-generated advertising and ULaw&apos;s AI Policy (2023). How might transparency requirements affect their marketing strategy?
+                </p>
+              </div>
+
+              {/* Navigation Buttons */}
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => router.push('/course2')}
+                  className="flex-1 px-6 py-3 border border-[#C9A84C] text-[#C9A84C] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[rgba(201,168,76,0.12)] transition-all"
+                >
+                  ← BACK TO COURSE
+                </button>
+                <button
+                  onClick={() => {
+                    setIsReviewMode(true);
+                    setEngageStage('iDo');
+                    setPhase('engage');
+                  }}
+                  className="flex-1 px-6 py-3 bg-[#C9A84C] text-[#08131E] rounded font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+                >
+                  REVIEW MODULE →
+                </button>
+              </div>
+
+              {!progress.course2ModulesCompleted.includes(2) && !isReviewMode && (
+                <p className="text-[#2DD36F] text-sm mt-4">✅ Module 2 is now unlocked!</p>
+              )}
+            </div>
           </div>
         )}
       </main>
