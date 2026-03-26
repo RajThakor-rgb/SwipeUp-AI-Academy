@@ -499,7 +499,7 @@ export default function Module2Page() {
   // Calculate XP
   const calculateMCQScore = () => {
     let correct = 0;
-    MCQ_QUESTIONS.forEach((q, idx) => {
+    MCQ_QUESTIONS.forEach((q) => {
       if (mcqAnswers[q.id] === q.correctAnswer) correct++;
     });
     return correct * 10;
