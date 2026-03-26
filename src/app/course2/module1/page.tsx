@@ -632,7 +632,7 @@ function QuickFrameworkTip({
               style={{
                 color: f.color,
                 backgroundColor: activeFW === fwKey ? `${f.color}20` : 'transparent',
-                ringColor: activeFW === fwKey ? f.color : undefined,
+                boxShadow: activeFW === fwKey ? '0 0 0 1px ${f.color}' : undefined,
               }}
             >
               {f.name}
