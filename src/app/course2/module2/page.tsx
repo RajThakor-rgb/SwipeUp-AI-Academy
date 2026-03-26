@@ -428,7 +428,6 @@ export default function Module2Page() {
   const [readIntelFiles, setReadIntelFiles] = useState<string[]>([]);
   const [mcqAnswers, setMcqAnswers] = useState<Record<string, number>>({});
   const [mcqSubmitted, setMcqSubmitted] = useState(false);
-  const [showMCQResults, setShowMCQResults] = useState(false);
   const [showFrameworkModal, setShowFrameworkModal] = useState(false);
   const [activeFrameworkElement, setActiveFrameworkElement] = useState(0);
   
@@ -439,9 +438,7 @@ export default function Module2Page() {
   const [scenarioRatings, setScenarioRatings] = useState<Record<string, number>>({});
   
   // UI State
-  const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [activeIntel, setActiveIntel] = useState<string | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [showHint, setShowHint] = useState<string | null>(null);
   
   // XP State
@@ -545,7 +542,6 @@ export default function Module2Page() {
   // Submit MCQ
   const submitMCQ = () => {
     setMcqSubmitted(true);
-    setShowMCQResults(true);
     const score = calculateMCQScore();
     setTotalXP(prev => prev + score);
   };
@@ -705,10 +701,7 @@ export default function Module2Page() {
                 {/* Video Placeholder */}
                 <div 
                   className="aspect-video bg-gradient-to-br from-purple-600/20 to-blue-600/20 flex items-center justify-center cursor-pointer relative group"
-                  onClick={() => {
-                    setActiveVideo(activeVideo === video.id ? null : video.id);
-                    markVideoWatched(video.id);
-                  }}
+                  onClick={() => markVideoWatched(video.id)}
                 >
                   <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-all">
                     <span className="text-3xl text-white ml-1">▶</span>
