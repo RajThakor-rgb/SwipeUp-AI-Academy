@@ -947,7 +947,7 @@ export default function Module2Page() {
   // We Do state
   const [weDoTask, setWeDoTask] = useState(1);
   const [wd1Done, setWd1Done] = useState(false);
-  const [WorkspaceUrl, setWorkspaceUrl] = useState('');
+  const [workspaceUrl, setWorkspaceUrl] = useState('');
   const [wd2Prompt, setWd2Prompt] = useState('');
   const [wd2Score, setWd2Score] = useState<{ n: string; p: boolean }[] | null>(null);
   const [wd2Pasted, setWd2Pasted] = useState(false);
