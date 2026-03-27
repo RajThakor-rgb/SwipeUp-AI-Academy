@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAcademyProgress } from '@/hooks/useAcademyProgress';
 import { logProgress } from '@/lib/notion';
@@ -15,6 +15,9 @@ const courses = [
   { id: 5, title: 'Career Development' },
 ];
 
+// Dev mode password (change this to whatever you want)
+const DEV_PASSWORD = 'SwipeUpAdmin2025!';
+
 export default function WelcomePage() {
   const router = useRouter();
   const { progress, isLoaded, registerStudent } = useAcademyProgress();
@@ -23,12 +26,80 @@ export default function WelcomePage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Dev mode state
+  const [showDevLogin, setShowDevLogin] = useState(false);
+  const [devPassword, setDevPassword] = useState('');
+  const [devError, setDevError] = useState('');
+  const logoClickCount = useRef(0);
+  const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
+
   // Redirect if already registered
   useEffect(() => {
     if (isLoaded && progress.studentName) {
       router.push('/dashboard');
     }
   }, [isLoaded, progress.studentName, router]);
+
+  // Check for dev mode in URL or localStorage
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('dev') === 'true') {
+      setShowDevLogin(true);
+    }
+  }, []);
+
+  // Hidden trigger: Click logo 5 times rapidly
+  const handleLogoClick = () => {
+    logoClickCount.current += 1;
+    
+    if (logoClickTimer.current) {
+      clearTimeout(logoClickTimer.current);
+    }
+    
+    logoClickTimer.current = setTimeout(() => {
+      logoClickCount.current = 0;
+    }, 1500);
+    
+    if (logoClickCount.current >= 5) {
+      setShowDevLogin(true);
+      logoClickCount.current = 0;
+    }
+  };
+
+  // Dev login handler
+  const handleDevLogin = () => {
+    setDevError('');
+    
+    if (devPassword === DEV_PASSWORD) {
+      // Create dev user with full access
+      const devUser = {
+        studentName: 'Dev Admin',
+        studentId: 'DEV0000',
+        totalXP: 9999,
+        badges: [
+          'ai-explorer',
+          'prompt-engineer-1',
+          'prompt-engineer-2',
+          'chatbot-builder-1',
+          'workflow-master',
+          'data-analyst',
+          'career-ready',
+        ],
+        course1ModulesCompleted: [1, 2, 3, 4, 5],
+        course2ModulesCompleted: [1, 2],
+        course2PrepareCompleted: [1, 2],
+        course3ModulesCompleted: [1, 2, 3, 4],
+        course4ModulesCompleted: [1, 2, 3],
+        course5ModulesCompleted: [1, 2],
+        isDevMode: true,
+      };
+      
+      localStorage.setItem('swipeup-progress', JSON.stringify(devUser));
+      router.push('/dashboard');
+    } else {
+      setDevError('Incorrect password');
+    }
+  };
 
   const handleSubmit = async () => {
     setError('');
@@ -78,7 +149,10 @@ export default function WelcomePage() {
           {/* Logo and Title */}
           <div className="text-center mb-10 animate-fade-in">
             <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-gold shadow-lg">
+              <div 
+                className="w-20 h-20 rounded-lg overflow-hidden border-2 border-gold shadow-lg cursor-pointer"
+                onClick={handleLogoClick}
+              >
                 <img
                   src="/SwipeUp-AI-Academy/swipeup-logo.jpeg"
                   alt="SwipeUp Logo"
@@ -221,6 +295,54 @@ export default function WelcomePage() {
           </p>
         </div>
       </footer>
+
+      {/* Hidden Dev Login Modal */}
+      {showDevLogin && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-secondary border border-gold rounded-2xl p-6 w-full max-w-sm">
+            <div className="text-center mb-4">
+              <div className="text-3xl mb-2">🔐</div>
+              <h3 className="text-xl font-bold text-gold">Admin Access</h3>
+              <p className="text-sm text-slate-400 mt-1">Enter admin password to continue</p>
+            </div>
+            
+            <div className="space-y-4">
+              <input
+                type="password"
+                value={devPassword}
+                onChange={(e) => setDevPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleDevLogin()}
+                placeholder="Enter password"
+                className="w-full px-4 py-3 bg-background border border-border rounded-lg text-white placeholder:text-slate-500 focus:border-gold transition-colors"
+                autoFocus
+              />
+              
+              {devError && (
+                <p className="text-red-400 text-sm text-center">{devError}</p>
+              )}
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDevLogin(false);
+                    setDevPassword('');
+                    setDevError('');
+                  }}
+                  className="flex-1 py-3 rounded-lg border border-slate-600 text-slate-400 font-medium hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDevLogin}
+                  className="flex-1 py-3 rounded-lg bg-gold text-navy font-bold hover:bg-gold/90 transition-colors"
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
