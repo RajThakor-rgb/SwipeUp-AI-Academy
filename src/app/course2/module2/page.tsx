@@ -127,44 +127,44 @@ const videos = [
 const TOOLS = {
   tidio: {
     name: 'Tidio',
-    subtitle: 'Recommended',
-    description: 'Free, 5 min setup',
-    badge: 'Best for beginners',
+    subtitle: 'Quick Setup',
+    description: 'Free plan (50 chats/mo), 5 min setup',
+    badge: 'Limited free tier',
     color: '#4A90D9',
     features: ['No credit card required', 'AI assistant (Lyro)', 'Live preview mode', 'Easy embedding'],
     setupSteps: [
-      'Go to tidio.com and create a free account',
-      'Skip the website installation step — you don\'t need it',
-      'Go to Settings > AI Assistant (or Lyro)',
-      'Find the box for customising your assistant\'s behaviour',
+      'Go to tidio.com and sign up with your email to create a free account (no card needed)',
+      'In the dashboard, click "Lyro" or "AI Assistant" in the left menu',
+      'Click "Create AI Agent" or "Customise Responses"',
+      'Find the text box where you can add custom instructions',
     ],
   },
   botpress: {
     name: 'Botpress',
-    subtitle: 'Advanced',
-    description: 'Free, deeper control',
-    badge: 'Best for developers',
+    subtitle: 'Recommended',
+    description: 'Free tier (500 msgs/mo), deeper control & powerful',
+    badge: 'Best for Learning',
     color: '#E8785A',
-    features: ['Open source option', 'Visual flow builder', 'Custom integrations', 'More technical'],
+    features: ['Generous free tier', 'Visual flow builder', 'Custom integrations', 'AI agent support'],
     setupSteps: [
-      'Go to botpress.cloud and create a free account',
-      'Create a new bot from scratch',
-      'Go to the AI Agent settings',
-      'Find the system prompt configuration area',
+      'Go to botpress.cloud and sign up (no credit card needed)',
+      'Click "Create Bot" -> choose "Blank Bot" and give it a name',
+      'Click on your new bot to open the studio',
+      'In the left sidebar, find "Agent" or click the AI icon to configure system instructions',
     ],
   },
   landbot: {
     name: 'Landbot',
     subtitle: 'Visual',
-    description: 'Free, drag and drop',
+    description: 'Sandbox Free (100 chats/mo), drag and drop',
     badge: 'Best for visual thinkers',
     color: '#5DC779',
     features: ['Visual flow builder', 'Drag and drop', 'Template library', 'WhatsApp integration'],
     setupSteps: [
-      'Go to landbot.io and create a free account',
-      'Choose "Create a bot from scratch"',
-      'Set up the AI response block',
-      'Configure the system instructions in the AI settings',
+      'Go to landbot.io and sign up for the free Sandbox plan',
+      'Click "Create New Bot" -> choose "Start from Scratch"',
+      'Add a "Questions" block or "AI Input" block to your flow',
+      'In the block settings, find where to add custom AI instructions',
     ],
   },
 };
@@ -947,6 +947,7 @@ export default function Module2Page() {
   // We Do state
   const [weDoTask, setWeDoTask] = useState(1);
   const [wd1Done, setWd1Done] = useState(false);
+  const [WorkspaceUrl, setWorkspaceUrl] = useState('');
   const [wd2Prompt, setWd2Prompt] = useState('');
   const [wd2Score, setWd2Score] = useState<{ n: string; p: boolean }[] | null>(null);
   const [wd2Pasted, setWd2Pasted] = useState(false);
@@ -1458,16 +1459,39 @@ senior team, who will contact you within 24 hours."`}
                   </div>
                   <p className="text-[12px] text-[#7A9AB5]">This is where your system prompt goes. Do not paste anything yet — just confirm you can see the settings panel.</p>
                 </TaskCard>
-
-                <ConfirmCheckbox
-                  checked={wd1Done}
-                  onChange={() => setWd1Done(true)}
-                  label={`I have created my ${tool.name} account and can see the AI assistant settings`}
-                />
+      
+                {/* URL Verification Gate */}
+                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-3">
+                  <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">🔗 VERIFY YOUR SETUP</p>
+                  <p className="text-[12px] text-[#9DBBD4] mb-3">
+                    Paste your {tool.name} workspace or chatbot URL to prove you've set it up:
+                  </p>
+                  <input
+                    type="url"
+                    value={workspaceUrl}
+                    onChange={(e) => setWorkspaceUrl(e.target.value)}
+                    placeholder={tool.name === 'Tidio'
+                      ? 'e.g., https://app.tidio.com/...' 
+                      : tool.name === 'Botpress'
+                      ? 'e.g., https://botpress.cloud/...'
+                      : 'e.g., https://landbot.io/...'}
+                    className="w-full p-3 bg-[#08131E] border border-[#1C3348] rounded text-[12px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] mb-2 placeholder:text-[#3D5870]"
+                  />
+                  <p className={cn(
+                    "text-[10px]",
+                    workspaceUrl.toLowerCase().includes(tool.name.toLowerCase())
+                      ? "text-[#2DD36F]"
+                      : "text-[#7A9AB5]"
+                  )}>
+                    {workspaceUrl.toLowerCase().includes(tool.name.toLowerCase())
+                      ? '✓ Valid link detected'
+                      : 'Enter a valid ' + tool.name + ' URL to continue'}
+                  </p>
+                </div>
 
                 <button
-                  onClick={() => wd1Done && setWeDoTask(2)}
-                  disabled={!wd1Done}
+                  onClick={() => workspaceUrl.toLowerCase().includes(tool.name.toLowerCase()) && setWeDoTask(2)}
+                  disabled={!workspaceUrl.toLowerCase().includes(tool.name.toLowerCase())}
                   className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
                 >
                   CONTINUE TO TASK 2 →
