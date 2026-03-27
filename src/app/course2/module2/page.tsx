@@ -1880,7 +1880,49 @@ senior team, who will contact you within 24 hours."`}
             <ConfirmCheckbox checked={false} onChange={() => {}} label='Add "Chatbot Design" to your LinkedIn skills' />
           </div>
         </div>
-
+        {/* Try Another Tool */}
+        <div className="bg-[rgba(74,144,217,0.06)] border border-[rgba(74,144,217,0.2)] rounded-lg p-4 mb-4">
+          <p className="font-mono text-[11px] font-bold text-[#4A90D9] tracking-widest uppercase mb-3">🔄 TRY ANOTHER TOOL</p>
+          <p className="text-[12px] text-[#9DBBD4] leading-relaxed mb-3">
+            Want to expand your skills? Build the same chatbot with a different platform.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {(['tidio', 'botpress', 'landbot'] as ToolType[])
+              .filter(tool => tool !== selectedTool)
+              .map((tool) => (
+                <button
+                  key={tool}
+                  onClick={() => {
+                    setSelectedTool(tool);
+                    setEngageStage('toolSelect');
+                    setWeDoTask(1);
+                    setYouDoTask(1);
+                    setWd1Done(false);
+                    setWd2Prompt('');
+                    setWd2Score(null);
+                    setWd2Pasted(false);
+                    setWd3Reflect1('');
+                    setWd3Reflect2('');
+                    setWd3Reflect3('');
+                    setWd3Refined('');
+                    setWd3RefinedScore(null);
+                    setYd1Prompt('');
+                    setYd1Score(null);
+                    setYd2Scripts('');
+                    setYd2Score(null);
+                    setYd3Reflect('');
+                    setFp('');
+                    setFScore(null);
+                    setPhase('engage');
+                  }}
+                  className="p-3 bg-[#112030] border border-[#1C3348] rounded-lg text-left hover:border-[#4A90D9] hover:bg-[rgba(74,144,217,0.08)] transition-all"
+                >
+                  <p className="font-mono text-[11px] font-bold" style={{ color: TOOLS[tool].color }}>{TOOLS[tool].name}</p>
+                  <p className="text-[10px] text-[#7A9AB5]">{TOOLS[tool].subtitle}</p>
+                </button>
+              ))}
+          </div>
+        </div>
         {/* Next Module Teaser */}
         <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
           <p className="font-mono text-[11px] font-bold text-[#4A90D9] tracking-widest uppercase mb-3">🔮 NEXT: MODULE 3 — WORKFLOW AUTOMATION</p>
