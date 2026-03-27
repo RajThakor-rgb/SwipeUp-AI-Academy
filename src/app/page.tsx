@@ -15,7 +15,7 @@ const courses = [
   { id: 5, title: 'Career Development' },
 ];
 
-// Dev mode password (change this to whatever you want)
+// Dev mode password
 const DEV_PASSWORD = 'SwipeUpAdmin2025!';
 
 export default function WelcomePage() {
@@ -31,7 +31,6 @@ export default function WelcomePage() {
   const [devPassword, setDevPassword] = useState('');
   const [devError, setDevError] = useState('');
   const logoClickCount = useRef(0);
-  const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Redirect if already registered
   useEffect(() => {
@@ -40,7 +39,7 @@ export default function WelcomePage() {
     }
   }, [isLoaded, progress.studentName, router]);
 
-  // Check for dev mode in URL or localStorage
+  // Check for dev mode in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('dev') === 'true') {
@@ -52,11 +51,7 @@ export default function WelcomePage() {
   const handleLogoClick = () => {
     logoClickCount.current += 1;
     
-    if (logoClickTimer.current) {
-      clearTimeout(logoClickTimer.current);
-    }
-    
-    logoClickTimer.current = setTimeout(() => {
+    setTimeout(() => {
       logoClickCount.current = 0;
     }, 1500);
     
@@ -72,30 +67,31 @@ export default function WelcomePage() {
     
     if (devPassword === DEV_PASSWORD) {
       // Create dev user with full access
-      const devUser = {
+      const devProgress = {
         studentName: 'Dev Admin',
         studentId: 'DEV0000',
         totalXP: 9999,
-        badges: [
-          'ai-explorer',
-          'prompt-engineer-1',
-          'prompt-engineer-2',
-          'chatbot-builder-1',
-          'workflow-master',
-          'data-analyst',
-          'career-ready',
-        ],
-        course1ModulesCompleted: [1, 2, 3, 4, 5],
+        badges: ['AI Explorer', 'Prompt Engineer', 'Chatbot Builder'],
+        course1Completed: true,
+        course1CompletionCode: 'DEV-MODE-FULL-ACCESS',
+        course2Unlocked: true,
         course2ModulesCompleted: [1, 2],
         course2PrepareCompleted: [1, 2],
-        course3ModulesCompleted: [1, 2, 3, 4],
-        course4ModulesCompleted: [1, 2, 3],
-        course5ModulesCompleted: [1, 2],
-        isDevMode: true,
+        course2CertificateEarned: false,
+        course3Unlocked: false,
+        course3Completed: false,
+        course4Unlocked: false,
+        course4Completed: false,
+        course5Unlocked: false,
+        course5Completed: false,
+        lastActive: new Date().toISOString(),
       };
       
-      localStorage.setItem('swipeup-progress', JSON.stringify(devUser));
-      router.push('/dashboard');
+      // Save to localStorage
+      localStorage.setItem('swipeup-academy-progress', JSON.stringify(devProgress));
+      
+      // Force reload to dashboard
+      window.location.href = window.location.origin + '/SwipeUp-AI-Academy/dashboard';
     } else {
       setDevError('Incorrect password');
     }
