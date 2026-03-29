@@ -294,7 +294,38 @@ export default function DashboardPage() {
                   {status === 'completed' && (
                     <div className="absolute top-3 right-3 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">✓</div>
                   )}
-
+                  {/* Skill Badges Section */}
+                  {progress.skillBadges && progress.skillBadges.length > 0 && (
+                    <div className="mt-6 pt-4 border-t border-border">
+                    <h4 className="text-sm font-medium text-slate-300 mb-3">Skill Badges</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {progress.skillBadges.map((badge) => (
+                          <div
+                            key={badge.id}
+                            className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 hover:border-gold/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">
+                                {badge.level === 'gold' ? '🥇' : badge.level === 'silver' ? '🥈' : '🥉'}
+                              </span>
+                              <div className="flex-1">
+                              <p className="font-medium text-white text-sm">{badge.name}</p>
+                              <p className={cn(
+                                "text-xs capitalize",
+                                badge.level === 'gold' && "text-yellow-400",
+                                badge.level === 'silver' && "text-slate-300",
+                                badge.level === 'bronze' && "text-amber-600"
+                              )}>
+                                {badge.level} Level
+                              </p>
+                            </div>
+                            <span className="text-gold text-sm">+{badge.xpEarned} XP</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                   {/* Course Header */}
                   <div className="flex items-start gap-3 mb-3">
                     <span className="text-3xl">{course.emoji}</span>
