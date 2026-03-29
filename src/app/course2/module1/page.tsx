@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAcademyProgress } from '@/hooks/useAcademyProgress';
 import { cn } from '@/lib/utils';
+import { IterationRounds, SelfAssessmentChecklist, ExportPortfolioButton, SkillLevelDisplay } from '@/components/SimplifiedFeatures';
+import { SkillBadgeProgress } from '@/types/academy';
 
 // Types
 type Phase = 'prepare' | 'engage' | 'consolidate';
@@ -17,17 +19,33 @@ interface MCQQuestion {
   correct: number;
 }
 
+interface IterationRound {
+  round: number;
+  prompt: string;
+  reflection: string;
+  score: number;
+  maxScore: number;
+  improvements: string[];
+}
+
 interface SavedAnswers {
   wd2Txt: string;
   wd2Score: { n: string; p: boolean }[];
+  wd2Iterations: IterationRound[];
+  wd2CurrentRound: number;
   wd3Txt: string;
   wd3Score: { n: string; p: boolean }[];
+  wd3Iterations: IterationRound[];
+  wd3CurrentRound: number;
   yd1Txt: string;
   yd1Score: { n: string; p: boolean }[];
   yd2Txt: string;
   yd2Score: { n: string; p: boolean }[];
   yd3Txt: string;
   yd3Score: { n: string; p: boolean }[];
+  selfAssessmentItems: { id: string; label: string; hint?: string; checked: boolean }[];
+  averageScore: number;
+  skillLevel: 'bronze' | 'silver' | 'gold';
   fp: string;
   fe: string;
   fScore: { n: string; p: boolean }[];
@@ -125,7 +143,7 @@ const FRAMEWORKS = {
     beforeAfter: {
       before: 'Write an Instagram caption for our new dress.',
       after: 'Context: Velara is a British sustainable luxury fashion brand. Role: Act as a social media copywriter. Action: Write an Instagram caption for our new summer dress. Format: Under 150 characters with one emoji. Tone: Sophisticated, warm, and aspirational.',
-      improvement: 'The CRAFT prompt provides context about the brand, assigns a specific role, and defines the format and tone — resulting in output that matches brand guidelines without revision.'
+      improvement: 'The CRAFT prompt provides context about the brand, assigns a specific role, and defines the format and tone — resulting in output that matches brand guidelines without revision.',
     },
   },
   costar: {
@@ -149,7 +167,7 @@ const FRAMEWORKS = {
     beforeAfter: {
       before: 'Write an email about our sales performance.',
       after: 'Context: Velara is a fashion brand preparing its weekly update. Objective: Inform board members of sales performance. Style: Executive business writing. Tone: Confident and direct. Audience: Board of directors. Response: Structured email with subject line, 3 bullet summary, and one recommendation.',
-      improvement: 'CO-STAR transforms a vague request into a precise brief. The AI knows exactly who it\'s writing for (board), what style to use (executive), and what structure to follow.'
+      improvement: 'CO-STAR transforms a vague request into a precise brief. The AI knows exactly who it\'s writing for (board), what style to use (executive), and what structure to follow.',
     },
   },
   risen: {
@@ -172,7 +190,7 @@ const FRAMEWORKS = {
     beforeAfter: {
       before: 'Write a reply to a customer complaint.',
       after: 'Role: You are a customer service specialist for Velara. Instruction: Write a reply to a late delivery complaint. Steps: 1) Open with empathy. 2) Acknowledge the delay. 3) Offer a 10% discount. 4) Close warmly. End goal: A response that retains the customer. Narrowing: Do not sound like a template. Under 150 words.',
-      improvement: 'RISEN ensures the response follows a proven structure, includes specific elements (empathy, apology, compensation), and avoids the "robotic template" feel that frustrates customers.'
+      improvement: 'RISEN ensures the response follows a proven structure, includes specific elements (empathy, apology, compensation), and avoids the "robotic template" feel that frustrates customers.',
     },
   },
 };
@@ -632,7 +650,7 @@ function QuickFrameworkTip({
               style={{
                 color: f.color,
                 backgroundColor: activeFW === fwKey ? `${f.color}20` : 'transparent',
-                boxShadow: activeFW === fwKey ? '0 0 0 1px ${f.color}' : undefined,
+                boxShadow: activeFW === fwKey ? `0 0 0 1px ${f.color}` : undefined,
               }}
             >
               {f.name}
@@ -947,6 +965,33 @@ export default function Module1Page() {
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [savedAnswers, setSavedAnswers] = useState<SavedAnswers | null>(null);
 
+  // Iteration Rounds for WD2
+  const [wd2Iterations, setWd2Iterations] = useState<IterationRound[]>([
+    { round: 1, prompt: '', reflection: '', score: 0, maxScore: 6, improvements: [] },
+    { round: 2, prompt: '', reflection: '', score: 0, maxScore: 6, improvements: [] },
+  ]);
+  const [wd2CurrentRound, setWd2CurrentRound] = useState(1);
+
+  // Iteration Rounds for WD3
+  const [wd3Iterations, setWd3Iterations] = useState<IterationRound[]>([
+    { round: 1, prompt: '', reflection: '', score: 0, maxScore: 6, improvements: [] },
+    { round: 2, prompt: '', reflection: '', score: 0, maxScore: 6, improvements: [] },
+  ]);
+  const [wd3CurrentRound, setWd3CurrentRound] = useState(1);
+
+  // Self Assessment
+  const [selfAssessmentItems, setSelfAssessmentItems] = useState([
+    { id: 'context', label: 'My prompt includes clear context', hint: 'Background info, brand details, situation', checked: false },
+    { id: 'role', label: 'My prompt assigns a specific role to the AI', hint: 'e.g., "Act as a marketing copywriter"', checked: false },
+    { id: 'format', label: 'My prompt specifies the desired output format', hint: 'e.g., "150 words", "bullet points", "email format"', checked: false },
+    { id: 'tone', label: 'My prompt uses appropriate tone instructions', hint: 'e.g., "professional", "warm", "sophisticated"', checked: false },
+    { id: 'detail', label: 'My prompt is detailed enough for the AI to understand', hint: 'At least 50 words with specific requirements', checked: false },
+  ]);
+
+  // Skill Level tracking
+  const [averageScore, setAverageScore] = useState(0);
+  const [skillLevel, setSkillLevel] = useState<'bronze' | 'silver' | 'gold'>('bronze');
+
   // Load saved answers
   const loadSavedAnswers = useCallback(() => {
     try {
@@ -1011,6 +1056,13 @@ export default function Module1Page() {
         setFe(savedData.fe || '');
         setFScore(savedData.fScore || null);
         setModuleXP(savedData.moduleXP || 700);
+        if (savedData.wd2Iterations) setWd2Iterations(savedData.wd2Iterations);
+        if (savedData.wd2CurrentRound) setWd2CurrentRound(savedData.wd2CurrentRound);
+        if (savedData.wd3Iterations) setWd3Iterations(savedData.wd3Iterations);
+        if (savedData.wd3CurrentRound) setWd3CurrentRound(savedData.wd3CurrentRound);
+        if (savedData.selfAssessmentItems) setSelfAssessmentItems(savedData.selfAssessmentItems);
+        if (savedData.averageScore) setAverageScore(savedData.averageScore);
+        if (savedData.skillLevel) setSkillLevel(savedData.skillLevel);
       }
       
       setPhase('consolidate');
@@ -1050,7 +1102,104 @@ export default function Module1Page() {
     setMcqScore(0);
   };
 
-  // WD2 handlers
+  // WD2 Iteration handlers
+  const handleWd2PromptChange = (round: number, prompt: string) => {
+    setWd2Iterations(prev => prev.map(r => r.round === round ? { ...r, prompt } : r));
+  };
+
+  const handleWd2ReflectionChange = (round: number, reflection: string) => {
+    setWd2Iterations(prev => prev.map(r => r.round === round ? { ...r, reflection } : r));
+  };
+
+  const handleWd2IterationSubmit = (round: number) => {
+    const current = wd2Iterations.find(r => r.round === round);
+    if (!current || current.prompt.trim().length < 20) return;
+
+    const t = current.prompt.toLowerCase();
+    const criteria = [
+      { n: 'Role assigned', p: t.includes('act as') || t.includes('role') || t.includes('you are') },
+      { n: 'Context provided', p: t.includes('velara') || t.includes('brand') || t.includes('fashion') },
+      { n: 'Action specified', p: t.includes('write') || t.includes('create') || t.includes('generate') },
+      { n: 'Format defined', p: t.includes('word') || t.includes('character') || t.includes('email') || t.includes('caption') },
+      { n: 'Tone indicated', p: t.includes('tone') || t.includes('professional') || t.includes('warm') },
+      { n: 'Sufficient length', p: current.prompt.trim().split(/\s+/).length >= 30 },
+    ];
+    
+    const score = criteria.filter(c => c.p).length;
+    const improvements = criteria.filter(c => !c.p).map(c => c.n);
+    
+    setWd2Iterations(prev => prev.map(r => r.round === round ? { ...r, score, improvements } : r));
+    
+    const xp = score >= 5 ? 35 : score >= 4 ? 25 : 15;
+    addXP(xp);
+    setModuleXP(prev => prev + xp);
+    
+    if (round < 2) {
+      setWd2CurrentRound(round + 1);
+    }
+    
+    updateAverageScore();
+    saveAnswersWithScores({ wd2Iterations: wd2Iterations.map(r => r.round === round ? { ...r, score, improvements } : r), wd2CurrentRound: round < 2 ? round + 1 : round });
+  };
+
+  // WD3 Iteration handlers  
+  const handleWd3PromptChange = (round: number, prompt: string) => {
+    setWd3Iterations(prev => prev.map(r => r.round === round ? { ...r, prompt } : r));
+  };
+
+  const handleWd3ReflectionChange = (round: number, reflection: string) => {
+    setWd3Iterations(prev => prev.map(r => r.round === round ? { ...r, reflection } : r));
+  };
+
+  const handleWd3IterationSubmit = (round: number) => {
+    const current = wd3Iterations.find(r => r.round === round);
+    if (!current || current.prompt.trim().length < 20) return;
+
+    const t = current.prompt.toLowerCase();
+    const criteria = [
+      { n: 'Role assigned', p: t.includes('act as') || t.includes('role') || t.includes('you are') },
+      { n: 'Empathy shown', p: t.includes('empath') || t.includes('sorry') || t.includes('apolog') },
+      { n: 'Solution offered', p: t.includes('refund') || t.includes('exchange') || t.includes('help') },
+      { n: 'Format defined', p: t.includes('word') || t.includes('email') || t.includes('response') },
+      { n: 'Tone appropriate', p: t.includes('professional') || t.includes('warm') || t.includes('sincere') },
+      { n: 'Sufficient length', p: current.prompt.trim().split(/\s+/).length >= 30 },
+    ];
+    
+    const score = criteria.filter(c => c.p).length;
+    const improvements = criteria.filter(c => !c.p).map(c => c.n);
+    
+    setWd3Iterations(prev => prev.map(r => r.round === round ? { ...r, score, improvements } : r));
+    
+    const xp = score >= 5 ? 35 : score >= 4 ? 25 : 15;
+    addXP(xp);
+    setModuleXP(prev => prev + xp);
+    
+    if (round < 2) {
+      setWd3CurrentRound(round + 1);
+    }
+    
+    updateAverageScore();
+    saveAnswersWithScores({ wd3Iterations: wd3Iterations.map(r => r.round === round ? { ...r, score, improvements } : r), wd3CurrentRound: round < 2 ? round + 1 : round });
+  };
+
+  // Calculate average score and skill level
+  const updateAverageScore = useCallback(() => {
+    const scores: number[] = [];
+    
+    wd2Iterations.forEach(r => { if (r.score > 0) scores.push(r.score / r.maxScore); });
+    wd3Iterations.forEach(r => { if (r.score > 0) scores.push(r.score / r.maxScore); });
+    
+    if (scores.length > 0) {
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      setAverageScore(Math.round(avg * 100));
+      
+      if (avg >= 0.9) setSkillLevel('gold');
+      else if (avg >= 0.75) setSkillLevel('silver');
+      else setSkillLevel('bronze');
+    }
+  }, [wd2Iterations, wd3Iterations]);
+
+  // WD2 handlers (original - kept for backward compatibility)
   const handleWd2Submit = () => {
     const t = wd2Txt.toLowerCase();
     const criteria = [
@@ -1075,7 +1224,7 @@ export default function Module1Page() {
     }
   };
 
-  // WD3 handlers
+  // WD3 handlers (original - kept for backward compatibility)
   const handleWd3Submit = () => {
     const t = wd3Txt.toLowerCase();
     const criteria = [
@@ -1161,7 +1310,7 @@ export default function Module1Page() {
     const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 50);
     addXP(xp);
     setModuleXP(prev => prev + xp);
-    saveAnswersWithScores({ fp, fe, fScore: criteria });
+    saveAnswersWithScores({ fp, fe, fScore: criteria, selfAssessmentItems, averageScore, skillLevel });
     completeModule2(1);
     addBadge('prompt-engineer-1');
     setTimeout(() => setPhase('consolidate'), 2000);
@@ -1403,113 +1552,83 @@ export default function Module1Page() {
               </div>
             )}
 
-            {/* Task 2 */}
+            {/* Task 2 - With Iteration Rounds */}
             {weDoTask === 2 && (
               <div>
-                <TaskCard title="TASK 2: WRITE AN INSTAGRAM PROMPT">
-                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed">
-                    Write a prompt for Velara&apos;s Instagram caption. Focus on the Summer Solstice collection. Aim for 30+ words.
+                <TaskCard title="TASK 2: WRITE YOUR FIRST PROMPT (WITH ITERATION)">
+                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                    Write a prompt for the Instagram caption task. You'll refine it through 2 rounds.
                   </p>
-                </TaskCard>
+                  
+                  <QuickFrameworkTip 
+                    activeFW={activeFW}
+                    setActiveFW={setActiveFW}
+                    taskType="instagram"
+                    onExpand={() => setShowFrameworkModal(true)}
+                  />
+                  
+                  <IterationRounds
+                    rounds={wd2Iterations}
+                    currentRound={wd2CurrentRound}
+                    onRoundChange={setWd2CurrentRound}
+                    onPromptChange={handleWd2PromptChange}
+                    onReflectionChange={handleWd2ReflectionChange}
+                    onSubmit={handleWd2IterationSubmit}
+                    minRounds={2}
+                    maxRounds={2}
+                    placeholder="Write your prompt for the Instagram caption task..."
+                    reflectionPlaceholder="What worked well? What could be improved?"
+                  />
 
-                <QuickFrameworkTip 
-                  activeFW={activeFW} 
-                  setActiveFW={setActiveFW} 
-                  taskType="instagram"
-                  onExpand={() => setShowFrameworkModal(true)}
-                />
-
-                <PromptInput
-                  value={wd2Txt}
-                  onChange={setWd2Txt}
-                  placeholder="Write your structured prompt here..."
-                  minWords={15}
-                  onSubmit={handleWd2Submit}
-                  submitted={!!wd2Score}
-                  score={wd2Score}
-                />
-
-                {wd2Score && (
-                  <>
-                    <ScoreGrid criteria={wd2Score} />
-                    {wd2Score.filter(c => c.p).length < 4 && (
-                      <MissBox
-                        missed={wd2Score.filter(c => !c.p)}
-                        hints={{
-                          'Role assigned': 'Try: "Act as a social media copywriter"',
-                          'Platform context': 'Mention Instagram or social media',
-                          'Brand reference': 'Include "Velara", "sustainable", or "fashion"',
-                          'Format specified': 'Specify "caption under 150 characters"',
-                          'Sufficient detail': 'Add more context — aim for 30+ words',
-                        }}
-                      />
-                    )}
-                    {wd2Score.filter(c => c.p).length < 4 && (
-                      <Scaffold task="wd2" activeFW={activeFW} onBuild={handleWd2Scaffold} />
-                    )}
+                  {wd2Iterations.every(r => r.score > 0) && (
                     <button
                       onClick={() => setWeDoTask(3)}
                       className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
                     >
                       CONTINUE TO TASK 3 →
                     </button>
-                  </>
-                )}
+                  )}
+                </TaskCard>
               </div>
             )}
 
-            {/* Task 3 */}
+            {/* Task 3 - With Iteration Rounds */}
             {weDoTask === 3 && (
               <div>
-                <TaskCard title="TASK 3: CUSTOMER SERVICE PROMPT">
-                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed">
-                    A Velara customer&apos;s order arrived two weeks late. Write a prompt to generate a professional, empathetic response email. Aim for 40+ words.
+                <TaskCard title="TASK 3: CUSTOMER SERVICE PROMPT (WITH ITERATION)">
+                  <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
+                    Write a prompt for handling a customer complaint. Refine through 2 rounds.
                   </p>
-                </TaskCard>
+                  
+                  <QuickFrameworkTip 
+                    activeFW={activeFW}
+                    setActiveFW={setActiveFW}
+                    taskType="customerService"
+                    onExpand={() => setShowFrameworkModal(true)}
+                  />
+                  
+                  <IterationRounds
+                    rounds={wd3Iterations}
+                    currentRound={wd3CurrentRound}
+                    onRoundChange={setWd3CurrentRound}
+                    onPromptChange={handleWd3PromptChange}
+                    onReflectionChange={handleWd3ReflectionChange}
+                    onSubmit={handleWd3IterationSubmit}
+                    minRounds={2}
+                    maxRounds={2}
+                    placeholder="Write your prompt for handling a late delivery complaint..."
+                    reflectionPlaceholder="What did you improve from round 1?"
+                  />
 
-                <QuickFrameworkTip 
-                  activeFW={activeFW} 
-                  setActiveFW={setActiveFW} 
-                  taskType="customerService"
-                  onExpand={() => setShowFrameworkModal(true)}
-                />
-
-                <PromptInput
-                  value={wd3Txt}
-                  onChange={setWd3Txt}
-                  placeholder="Write your customer service prompt here..."
-                  minWords={20}
-                  onSubmit={handleWd3Submit}
-                  submitted={!!wd3Score}
-                  score={wd3Score}
-                />
-
-                {wd3Score && (
-                  <>
-                    <ScoreGrid criteria={wd3Score} />
-                    {wd3Score.filter(c => c.p).length < 4 && (
-                      <>
-                        <MissBox
-                          missed={wd3Score.filter(c => !c.p)}
-                          hints={{
-                            'Customer context': 'Reference the late delivery or complaint',
-                            'Empathy/tone': 'Use "empathetic", "sincere apology"',
-                            'Response format': 'Specify "email reply" or format details',
-                            'Brand voice': 'Reference Velara\'s sophisticated voice',
-                            'Sufficient detail': 'Expand — aim for 40+ words',
-                          }}
-                        />
-                        <Scaffold task="wd3" activeFW={activeFW} onBuild={handleWd3Scaffold} />
-                      </>
-                    )}
+                  {wd3Iterations.every(r => r.score > 0) && (
                     <button
                       onClick={() => setEngageStage('youDo')}
                       className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
                     >
                       CONTINUE TO YOU DO →
                     </button>
-                  </>
-                )}
+                  )}
+                </TaskCard>
               </div>
             )}
           </div>
@@ -1665,6 +1784,16 @@ export default function Module1Page() {
                 {yd3Score && (
                   <>
                     <ScoreGrid criteria={yd3Score} />
+                    
+                    {/* Self-Assessment Checklist */}
+                    <SelfAssessmentChecklist
+                      title="Self-Assessment"
+                      description="Check all that apply to your prompt work"
+                      items={selfAssessmentItems}
+                      onChange={setSelfAssessmentItems}
+                      minRequired={3}
+                    />
+
                     <button
                       onClick={() => setEngageStage('final')}
                       className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
@@ -1755,18 +1884,59 @@ export default function Module1Page() {
       </div>
       <PhaseIndicator currentPhase={phase} onPhaseClick={setPhase} isCompleted={true} />
 
-      <div className="p-5">
-        {/* Module Summary */}
-        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
-          <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">🏆 MODULE COMPLETE</p>
-          <div className="text-center py-4">
-            <span className="font-mono text-[32px] font-bold text-[#C9A84C]">+{moduleXP} XP</span>
-            <p className="text-[12px] text-[#7A9AB5] mt-1">Total XP earned in this module</p>
+      <div className="p-5 space-y-6">
+        <div className="text-center py-6">
+          <div className="text-4xl mb-3">🎉</div>
+          <h2 className="font-mono text-lg font-bold text-[#C9A84C] tracking-wider uppercase mb-2">
+            Module Complete!
+          </h2>
+          <p className="text-[#9DBBD4]">You've earned XP and unlocked new skills.</p>
+        </div>
+
+        <SkillLevelDisplay
+          level={skillLevel}
+          xp={moduleXP}
+          skillName="Prompt Engineering"
+          nextLevelXP={skillLevel === 'bronze' ? 100 : skillLevel === 'silver' ? 200 : undefined}
+        />
+
+        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4">
+          <p className="font-mono text-xs text-[#C9A84C] tracking-wider uppercase mb-2">Module Stats</p>
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-white">{moduleXP}</p>
+              <p className="text-xs text-[#3D5870]">XP Earned</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">{averageScore}%</p>
+              <p className="text-xs text-[#3D5870]">Average Score</p>
+            </div>
           </div>
         </div>
 
-        {/* What You Learned */}
-        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+        <ExportPortfolioButton
+          data={{
+            studentName: progress.studentName,
+            studentId: progress.studentId,
+            courseName: 'Productivity & Organisation',
+            moduleName: 'Module 1: Prompt Engineering',
+            completedDate: new Date().toLocaleDateString(),
+            xpEarned: moduleXP,
+            skillLevel: skillLevel,
+            prompts: [
+              { title: 'WD2 Instagram Prompt', prompt: wd2Iterations[0]?.prompt || '', score: wd2Iterations[0]?.score, maxScore: 6 },
+              { title: 'WD2 Refined Prompt', prompt: wd2Iterations[1]?.prompt || '', score: wd2Iterations[1]?.score, maxScore: 6 },
+              { title: 'WD3 Customer Service Prompt', prompt: wd3Iterations[0]?.prompt || '', score: wd3Iterations[0]?.score, maxScore: 6 },
+              { title: 'WD3 Refined Prompt', prompt: wd3Iterations[1]?.prompt || '', score: wd3Iterations[1]?.score, maxScore: 6 },
+            ],
+            reflections: selfAssessmentItems.filter(i => i.checked).map(i => ({
+              question: i.label,
+              answer: 'Checked'
+            })),
+          }}
+        />
+
+        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4">
           <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">📚 WHAT YOU LEARNED</p>
           <ul className="space-y-2">
             <li className="flex items-start gap-2 text-[12px] text-[#9DBBD4]">
@@ -1783,41 +1953,17 @@ export default function Module1Page() {
             </li>
             <li className="flex items-start gap-2 text-[12px] text-[#9DBBD4]">
               <span className="text-[#2DD36F]">✓</span>
-              Structuring prompts for different business scenarios
+              Iterating and refining prompts for better results
             </li>
           </ul>
         </div>
 
-        {/* Saved Answers */}
-        {savedAnswers && (
-          <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
-            <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">📝 YOUR SUBMISSIONS</p>
-            
-            {savedAnswers.wd2Txt && (
-              <div className="mb-3 pb-3 border-b border-[#1C3348]">
-                <p className="font-mono text-[9px] font-bold text-[#3D5870] tracking-widest uppercase mb-1">WE DO TASK 2 — INSTAGRAM</p>
-                <p className="text-[11px] text-[#9DBBD4] leading-relaxed">{savedAnswers.wd2Txt}</p>
-              </div>
-            )}
-            
-            {savedAnswers.wd3Txt && (
-              <div className="mb-3 pb-3 border-b border-[#1C3348]">
-                <p className="font-mono text-[9px] font-bold text-[#3D5870] tracking-widest uppercase mb-1">WE DO TASK 3 — CUSTOMER SERVICE</p>
-                <p className="text-[11px] text-[#9DBBD4] leading-relaxed">{savedAnswers.wd3Txt}</p>
-              </div>
-            )}
-            
-            {savedAnswers.fp && (
-              <div>
-                <p className="font-mono text-[9px] font-bold text-[#3D5870] tracking-widest uppercase mb-1">FINAL CHALLENGE</p>
-                <p className="text-[11px] text-[#9DBBD4] leading-relaxed">{savedAnswers.fp}</p>
-              </div>
-            )}
-          </div>
-        )}
-
         <button
-          onClick={() => router.push('/course2')}
+          onClick={() => {
+            completeModule2(1);
+            addBadge('prompt-engineer-1');
+            router.push('/course2');
+          }}
           className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
         >
           RETURN TO COURSE →
