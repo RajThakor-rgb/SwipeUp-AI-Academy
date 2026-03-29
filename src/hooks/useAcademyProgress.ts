@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AcademyProgress, defaultProgress } from '@/types/academy';
+import { AcademyProgress, defaultProgress, SkillBadgeProgress, ModuleProgress, SkillLevel } from '@/types/academy';
 
 const STORAGE_KEY = 'swipeup-academy-progress';
 
@@ -75,6 +75,63 @@ export function useAcademyProgress() {
     return newProgress;
   }, [progress, saveProgress]);
 
+  // Add or update skill badge
+  const addSkillBadge = useCallback((badge: SkillBadgeProgress) => {
+    const existingIndex = progress.skillBadges.findIndex(b => b.id === badge.id);
+    let newSkillBadges: SkillBadgeProgress[];
+    
+    if (existingIndex >= 0) {
+      // Update existing badge if new level is higher
+      newSkillBadges = [...progress.skillBadges];
+      const existing = newSkillBadges[existingIndex];
+      const levelOrder = { bronze: 1, silver: 2, gold: 3 };
+      if (levelOrder[badge.level] > levelOrder[existing.level]) {
+        newSkillBadges[existingIndex] = badge;
+      }
+    } else {
+      newSkillBadges = [...progress.skillBadges, badge];
+    }
+    
+    const newProgress = {
+      ...progress,
+      skillBadges: newSkillBadges,
+      totalXP: progress.totalXP + badge.xpEarned,
+      lastActive: new Date().toISOString(),
+    };
+    saveProgress(newProgress);
+    return newProgress;
+  }, [progress, saveProgress]);
+
+  // Calculate skill level based on score percentage
+  const calculateSkillLevel = useCallback((avgScorePercent: number): SkillLevel => {
+    if (avgScorePercent >= 90) return 'gold';
+    if (avgScorePercent >= 75) return 'silver';
+    return 'bronze';
+  }, []);
+
+  // Update module progress
+  const updateModuleProgress = useCallback((
+    moduleNum: 1 | 2,
+    moduleProgress: Partial<ModuleProgress>
+  ) => {
+    const key = moduleNum === 1 ? 'course2Module1Progress' : 'course2Module2Progress';
+    const existing = progress[key] || {
+      moduleId: moduleNum,
+      prompts: [],
+      conversationLogs: [],
+      selfAssessments: {},
+      skillLevel: 'bronze' as SkillLevel,
+    };
+    
+    const newProgress = {
+      ...progress,
+      [key]: { ...existing, ...moduleProgress },
+      lastActive: new Date().toISOString(),
+    };
+    saveProgress(newProgress);
+    return newProgress;
+  }, [progress, saveProgress]);
+
   // Complete module in Course 2
   const completeModule2 = useCallback((moduleNum: number) => {
     if (progress.course2ModulesCompleted.includes(moduleNum)) return progress;
@@ -100,16 +157,15 @@ export function useAcademyProgress() {
   }, [progress, saveProgress]);
 
   // Unlock Course 2 with code
-  // Also marks Course 1 as completed and awards badge
   const unlockCourse2 = useCallback((code: string) => {
     const newProgress = {
       ...progress,
       course2Unlocked: true,
-      course1Completed: true, // Mark Course 1 as completed
+      course1Completed: true,
       course1CompletionCode: code,
       badges: progress.badges.includes('AI Explorer') 
         ? progress.badges 
-        : [...progress.badges, 'AI Explorer'], // Award badge for Course 1
+        : [...progress.badges, 'AI Explorer'],
       lastActive: new Date().toISOString(),
     };
     saveProgress(newProgress);
@@ -117,12 +173,8 @@ export function useAcademyProgress() {
   }, [progress, saveProgress]);
 
   // Validate completion code format
-  // Format: SWIPEUP-XXXX-XXX-XXXX (name part + numbers + random part)
-  // Name part may contain spaces if name is shorter than 4 chars
   const validateCodeFormat = useCallback((code: string): boolean => {
-    // Remove any extra spaces and normalize
     const normalizedCode = code.toUpperCase().replace(/\s+/g, ' ').trim();
-    // Pattern: SWIPEUP-[4 chars including possible space]-[numbers]-[alphanumeric]
     const pattern = /^SWIPEUP-[A-Z ]{4}-\d+-.+$/;
     return pattern.test(normalizedCode);
   }, []);
@@ -140,6 +192,9 @@ export function useAcademyProgress() {
     updateProgress,
     addXP,
     addBadge,
+    addSkillBadge,
+    calculateSkillLevel,
+    updateModuleProgress,
     completeModule2,
     completePrepare2,
     unlockCourse2,
