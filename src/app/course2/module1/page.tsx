@@ -980,7 +980,7 @@ export default function Module1Page() {
   const [wd3CurrentRound, setWd3CurrentRound] = useState(1);
 
   // Self Assessment
-  const [selfAssessmentItems, setSelfAssessmentItems] = useState<{ id: string; hint?: string; checked: boolean }[]>([
+  const [selfAssessmentItems, setSelfAssessmentItems] = useState<{ id: string; label: string; hint?: string; checked: boolean }[]>([
     { id: 'context', label: 'My prompt includes clear context', hint: 'Background info, brand details, situation', checked: false },
     { id: 'role', label: 'My prompt assigns a specific role to the AI', hint: 'e.g., "Act as a marketing copywriter"', checked: false },
     { id: 'format', label: 'My prompt specifies the desired output format', hint: 'e.g., "150 words", "bullet points", "email format"', checked: false },
