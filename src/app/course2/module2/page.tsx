@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAcademyProgress } from '@/hooks/useAcademyProgress';
 import { cn } from '@/lib/utils';
+import { IterationRounds, SelfAssessmentChecklist, ConversationLogInput, ExportPortfolioButton, SkillLevelDisplay } from '@/components/SimplifiedFeatures';
+import { SkillBadgeProgress } from '@/types/academy';
 
 // Types
 type Phase = 'prepare' | 'engage' | 'consolidate';
@@ -17,9 +19,21 @@ interface MCQQuestion {
   correct: number;
 }
 
+interface IterationRound {
+  round: number;
+  prompt: string;
+  reflection: string;
+  score: number;
+  maxScore: number;
+  improvements: string[];
+}
+
 interface SavedAnswers {
   wd2Prompt: string;
   wd2Score: { n: string; p: boolean }[];
+  wd2Iterations: IterationRound[];
+  wd2CurrentRound: number;
+  conversationLog: string;
   wd3Reflect1: string;
   wd3Reflect2: string;
   wd3Reflect3: string;
@@ -30,6 +44,9 @@ interface SavedAnswers {
   yd2Scripts: string;
   yd2Score: { n: string; p: boolean }[];
   yd3Reflect: string;
+  selfAssessmentItems: { id: string; label: string; hint?: string; checked: boolean }[];
+  averageScore: number;
+  skillLevel: 'bronze' | 'silver' | 'gold';
   fp: string;
   fScore: { n: string; p: boolean }[];
   selectedTool: ToolType;
@@ -96,9 +113,7 @@ const mcqQuestions: MCQQuestion[] = [
   },
 ];
 
-// ============================================================
-// ENHANCED: Video resources with REAL YouTube URLs
-// ============================================================
+// Video resources
 const videos = [
   { 
     title: 'AI Chatbots for Business', 
@@ -255,9 +270,7 @@ function xpForScore(pass: number, total: number, max: number): number {
   return Math.round(max * 0.2);
 }
 
-// ============================================================
-// ENHANCED: Phase Progress Indicator with icons
-// ============================================================
+// Phase Progress Indicator
 function PhaseIndicator({ currentPhase, onPhaseClick, isCompleted }: { currentPhase: Phase; onPhaseClick: (phase: Phase) => void; isCompleted: boolean }) {
   const phases = [
     { id: 'prepare', label: 'Prepare', icon: '📚' },
@@ -299,9 +312,7 @@ function PhaseIndicator({ currentPhase, onPhaseClick, isCompleted }: { currentPh
   );
 }
 
-// ============================================================
-// ENHANCED: Progress Bar with step indicator
-// ============================================================
+// Progress Bar
 function ProgressBar({ phase, prepareProgress, engageStage, weDoTask, youDoTask }: { 
   phase: Phase; 
   prepareProgress: number;
@@ -384,9 +395,7 @@ function IntelFileCard({ title, subtitle, read, onToggle }: { title: string; sub
   );
 }
 
-// ============================================================
-// ENHANCED: Video Card with embedded YouTube player
-// ============================================================
+// Video Card
 function VideoCard({ 
   title, 
   duration, 
@@ -411,7 +420,6 @@ function VideoCard({
       "bg-[#112030] border rounded-lg overflow-hidden transition-all",
       watched ? "border-[rgba(45,211,111,0.3)]" : "border-[#1C3348]"
     )}>
-      {/* Video Thumbnail / Player */}
       {isExpanded ? (
         <div className="aspect-video">
           <iframe 
@@ -448,7 +456,6 @@ function VideoCard({
         </button>
       )}
       
-      {/* Video Info */}
       <div className="p-3">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -474,9 +481,7 @@ function VideoCard({
   );
 }
 
-// ============================================================
-// NEW: SCOPE Interactive Checklist Component
-// ============================================================
+// SCOPE Interactive Checklist Component
 function ScopeChecklist({ checked, onChange }: { checked: boolean[]; onChange: (idx: number) => void }) {
   const letters = SCOPE_FRAMEWORK.letters;
   const completed = checked.filter(Boolean).length;
@@ -656,7 +661,6 @@ function ScopeFrameworkCard({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen:
 
       {isOpen && (
         <div className="px-4 pb-4">
-          {/* Description */}
           <div 
             className="text-[13px] text-[#9DBBD4] leading-relaxed p-3 rounded border-l-2 mb-3"
             style={{ borderColor: fw.color, backgroundColor: `${fw.color}0D` }}
@@ -664,7 +668,6 @@ function ScopeFrameworkCard({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen:
             {fw.desc}
           </div>
 
-          {/* Why It Works & Best For */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             <div className="p-3 bg-[rgba(45,211,111,0.04)] border border-[rgba(45,211,111,0.15)] rounded">
               <p className="font-mono text-[9px] font-bold text-[#2DD36F] tracking-widest uppercase mb-1.5">💡 Why It Works</p>
@@ -676,7 +679,6 @@ function ScopeFrameworkCard({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen:
             </div>
           </div>
 
-          {/* Letters Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
             {fw.letters.map((l) => (
               <div
@@ -692,7 +694,6 @@ function ScopeFrameworkCard({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen:
             ))}
           </div>
 
-          {/* Example */}
           <div className="p-3 bg-[rgba(201,168,76,0.05)] border border-[rgba(201,168,76,0.15)] rounded">
             <p className="font-mono text-[9px] font-bold text-[#C9A84C] tracking-widest uppercase mb-1.5">{fw.example.label}</p>
             <p className="text-[12px] text-[#9DBBD4] leading-relaxed whitespace-pre-line">{fw.example.text}</p>
@@ -973,6 +974,29 @@ export default function Module2Page() {
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [savedAnswers, setSavedAnswers] = useState<SavedAnswers | null>(null);
 
+  // Conversation Log for Task 1
+  const [conversationLog, setConversationLog] = useState('');
+
+  // Iteration Rounds for System Prompt (Task 2)
+  const [wd2Iterations, setWd2Iterations] = useState<IterationRound[]>([
+    { round: 1, prompt: '', reflection: '', score: 0, maxScore: 6, improvements: [] },
+    { round: 2, prompt: '', reflection: '', score: 0, maxScore: 6, improvements: [] },
+  ]);
+  const [wd2CurrentRound, setWd2CurrentRound] = useState(1);
+
+  // Self Assessment for You Do
+  const [selfAssessmentItems, setSelfAssessmentItems] = useState<{ id: string; label: string; hint?: string; checked: boolean }[]>([
+    { id: 'greeting', label: 'My chatbot greeted the customer warmly', hint: 'A friendly, professional opening', checked: false },
+    { id: 'helpful', label: 'My chatbot provided helpful information', hint: 'Addressed the customer\'s actual question', checked: false },
+    { id: 'escalated', label: 'My chatbot escalated appropriately when needed', hint: 'Recognised Trading Standards, solicitor mentions', checked: false },
+    { id: 'character', label: 'My chatbot stayed in character (Aria)', hint: 'Consistent tone, name usage, brand voice', checked: false },
+    { id: 'language', label: 'My chatbot used brand-appropriate language', hint: 'Velara style, warm but professional', checked: false },
+  ]);
+
+  // Skill Level tracking
+  const [averageScore, setAverageScore] = useState(0);
+  const [skillLevel, setSkillLevel] = useState<'bronze' | 'silver' | 'gold'>('bronze');
+
   // Load saved answers
   const loadSavedAnswers = useCallback(() => {
     try {
@@ -1040,6 +1064,12 @@ export default function Module2Page() {
         if (savedData.scopeChecklist) {
           setScopeChecklist(savedData.scopeChecklist);
         }
+        if (savedData.wd2Iterations) setWd2Iterations(savedData.wd2Iterations);
+        if (savedData.wd2CurrentRound) setWd2CurrentRound(savedData.wd2CurrentRound);
+        if (savedData.conversationLog) setConversationLog(savedData.conversationLog);
+        if (savedData.selfAssessmentItems) setSelfAssessmentItems(savedData.selfAssessmentItems);
+        if (savedData.averageScore) setAverageScore(savedData.averageScore);
+        if (savedData.skillLevel) setSkillLevel(savedData.skillLevel);
       }
       
       setPhase('consolidate');
@@ -1054,15 +1084,12 @@ export default function Module2Page() {
     }
   }, [progress.course2PrepareCompleted, progress.course2ModulesCompleted, loadSavedAnswers]);
 
-  // ============================================================
-  // NEW: SCOPE Checklist handler
-  // ============================================================
+  // SCOPE Checklist handler
   const handleScopeCheck = (idx: number) => {
     const newChecked = [...scopeChecklist];
     newChecked[idx] = !newChecked[idx];
     setScopeChecklist(newChecked);
     
-    // Award XP when all 5 are checked
     if (newChecked.every(Boolean) && !scopeXPAwarded) {
       addXP(10);
       setModuleXP(prev => prev + 10);
@@ -1097,7 +1124,64 @@ export default function Module2Page() {
     setMcqScore(0);
   };
 
-  // WD2 handler
+  // System Prompt Iteration handlers
+  const handleWd2PromptChange = (round: number, prompt: string) => {
+    setWd2Iterations(prev => prev.map(r => r.round === round ? { ...r, prompt } : r));
+  };
+
+  const handleWd2ReflectionChange = (round: number, reflection: string) => {
+    setWd2Iterations(prev => prev.map(r => r.round === round ? { ...r, reflection } : r));
+  };
+
+  const handleWd2IterationSubmit = (round: number) => {
+    const current = wd2Iterations.find(r => r.round === round);
+    if (!current || current.prompt.trim().length < 30) return;
+
+    const t = current.prompt.toLowerCase();
+    const criteria = [
+      { n: 'Scenario defined', p: t.includes('velara') || t.includes('fashion') || t.includes('brand') },
+      { n: 'Channel/format set', p: t.includes('word') || t.includes('150') || t.includes('email') || t.includes('chat') },
+      { n: 'Objective stated', p: t.includes('resolv') || t.includes('help') || t.includes('assist') },
+      { n: 'Persona described', p: t.includes('aria') || t.includes('name') || t.includes('warm') || t.includes('professional') },
+      { n: 'Escalation rules set', p: t.includes('escalat') || t.includes('senior') || t.includes('pass') || t.includes('trading') },
+      { n: 'Sufficient detail', p: current.prompt.trim().split(/\s+/).length >= 60 },
+    ];
+    
+    const score = criteria.filter(c => c.p).length;
+    const improvements = criteria.filter(c => !c.p).map(c => c.n);
+    
+    setWd2Iterations(prev => prev.map(r => r.round === round ? { ...r, score, improvements } : r));
+    
+    const xp = score >= 5 ? 40 : score >= 4 ? 30 : 20;
+    addXP(xp);
+    setModuleXP(prev => prev + xp);
+    
+    if (round < 2) {
+      setWd2CurrentRound(round + 1);
+    }
+    
+    updateAverageScore();
+    saveAnswers({ 
+      wd2Iterations: wd2Iterations.map(r => r.round === round ? { ...r, score, improvements } : r), 
+      wd2CurrentRound: round < 2 ? round + 1 : round 
+    });
+  };
+
+  const updateAverageScore = useCallback(() => {
+    const scores: number[] = [];
+    wd2Iterations.forEach(r => { if (r.score > 0) scores.push(r.score / r.maxScore); });
+    
+    if (scores.length > 0) {
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      setAverageScore(Math.round(avg * 100));
+      
+      if (avg >= 0.9) setSkillLevel('gold');
+      else if (avg >= 0.75) setSkillLevel('silver');
+      else setSkillLevel('bronze');
+    }
+  }, [wd2Iterations]);
+
+  // WD2 handler (original - kept for backward compatibility)
   const handleWd2Submit = () => {
     const t = wd2Prompt.toLowerCase();
     const criteria = [
@@ -1197,7 +1281,7 @@ export default function Module2Page() {
     const xp = xpForScore(criteria.filter(c => c.p).length, criteria.length, 50);
     addXP(xp);
     setModuleXP(prev => prev + xp);
-    saveAnswers({ fp, fScore: criteria });
+    saveAnswers({ fp, fScore: criteria, selfAssessmentItems, averageScore, skillLevel });
     completeModule2(2);
     addBadge('chatbot-builder-1');
     setTimeout(() => setPhase('consolidate'), 2000);
@@ -1220,7 +1304,6 @@ export default function Module2Page() {
       <ProgressBar phase={phase} prepareProgress={prepareProgress} engageStage={engageStage} weDoTask={weDoTask} youDoTask={youDoTask} />
 
       <div className="p-5 space-y-4">
-        {/* Intel Files */}
         <div>
           <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📂 INTEL FILES</p>
           <div className="space-y-2">
@@ -1239,9 +1322,6 @@ export default function Module2Page() {
           </div>
         </div>
 
-        {/* ============================================================ */}
-        {/* ENHANCED: Video Resources with Embedded YouTube */}
-        {/* ============================================================ */}
         <div>
           <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">🎥 VIDEO TRAINING</p>
           <p className="text-[11px] text-[#7A9AB5] mb-3">Click a video to watch. All videos open directly in this page.</p>
@@ -1266,9 +1346,6 @@ export default function Module2Page() {
           </div>
         </div>
 
-        {/* ============================================================ */}
-        {/* NEW: SCOPE Framework Interactive Checklist */}
-        {/* ============================================================ */}
         <div>
           <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📐 LEARNING CHECKLIST</p>
           <p className="text-[11px] text-[#7A9AB5] mb-3">Check off each SCOPE element as you understand it. Complete all 5 to earn XP!</p>
@@ -1278,14 +1355,12 @@ export default function Module2Page() {
           />
         </div>
 
-        {/* SCOPE Framework Reference */}
         <div>
           <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">📐 FRAMEWORK GUIDE</p>
           <p className="text-[11px] text-[#7A9AB5] mb-3">Expand for the full SCOPE framework reference.</p>
           <ScopeFrameworkCard isOpen={scopeOpen} setIsOpen={setScopeOpen} />
         </div>
 
-        {/* MCQ Gate */}
         <MCQGate
           answers={mcqAnswers}
           submitted={mcqSubmitted}
@@ -1359,7 +1434,6 @@ export default function Module2Page() {
           <ProgressBar phase={phase} prepareProgress={prepareProgress} engageStage={engageStage} weDoTask={weDoTask} youDoTask={youDoTask} />
 
           <div className="p-5">
-            {/* Video */}
             <div className="bg-[#112030] border border-[#1C3348] rounded-lg overflow-hidden mb-4">
               <div className="px-4 py-3 border-b border-[#1C3348] flex items-center gap-2">
                 <span className="text-lg">🎬</span>
@@ -1375,7 +1449,6 @@ export default function Module2Page() {
               </div>
             </div>
 
-            {/* Expert's System Prompt */}
             <div className="bg-[rgba(45,211,111,0.06)] border border-[rgba(45,211,111,0.2)] rounded-lg p-4 mb-4">
               <p className="font-mono text-[10px] font-bold text-[#2DD36F] tracking-widest uppercase mb-2">✓ THE EXPERT&apos;S SYSTEM PROMPT</p>
               <div className="text-[12px] text-[#9DBBD4] leading-relaxed p-3 bg-[#08131E] rounded whitespace-pre-line font-mono">
@@ -1398,7 +1471,6 @@ senior team, who will contact you within 24 hours."`}
               </div>
             </div>
 
-            {/* Key Takeaway */}
             <div className="bg-[rgba(201,168,76,0.06)] border border-[rgba(201,168,76,0.2)] rounded-lg p-4 mb-4">
               <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">💡 KEY TAKEAWAYS</p>
               <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-2">Notice three things the expert did:</p>
@@ -1444,10 +1516,10 @@ senior team, who will contact you within 24 hours."`}
           <ProgressBar phase={phase} prepareProgress={prepareProgress} engageStage={engageStage} weDoTask={weDoTask} youDoTask={youDoTask} />
 
           <div className="p-5">
-            {/* Task 1: Account Setup */}
+            {/* Task 1: Test Your Chatbot with ConversationLogInput */}
             {weDoTask === 1 && (
               <div>
-                <TaskCard title="TASK 1: CREATE YOUR ACCOUNT">
+                <TaskCard title="TASK 1: TEST YOUR CHATBOT">
                   <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">Follow these steps to set up your {tool.name} account:</p>
                   <div className="space-y-2 mb-4">
                     {tool.setupSteps.map((step, i) => (
@@ -1457,95 +1529,76 @@ senior team, who will contact you within 24 hours."`}
                       </div>
                     ))}
                   </div>
-                  <p className="text-[12px] text-[#7A9AB5]">This is where your system prompt goes. Do not paste anything yet — just confirm you can see the settings panel.</p>
+                  <p className="text-[12px] text-[#7A9AB5] mb-3">After setting up, test your chatbot by sending some messages. Paste your conversation below.</p>
                 </TaskCard>
       
-                {/* URL Verification Gate */}
-                <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-3">
-                  <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">🔗 VERIFY YOUR SETUP</p>
-                  <p className="text-[12px] text-[#9DBBD4] mb-3">
-                    Paste your {tool.name} workspace or chatbot URL to prove you've set it up:
-                  </p>
-                  <input
-                    type="url"
-                    value={workspaceUrl}
-                    onChange={(e) => setWorkspaceUrl(e.target.value)}
-                    placeholder={tool.name === 'Tidio'
-                      ? 'e.g., https://app.tidio.com/...' 
-                      : tool.name === 'Botpress'
-                      ? 'e.g., https://botpress.cloud/...'
-                      : 'e.g., https://landbot.io/...'}
-                    className="w-full p-3 bg-[#08131E] border border-[#1C3348] rounded text-[12px] text-white outline-none focus:border-[rgba(201,168,76,0.5)] mb-2 placeholder:text-[#3D5870]"
-                  />
-                  <p className={cn(
-                    "text-[10px]",
-                    workspaceUrl.toLowerCase().includes(tool.name.toLowerCase())
-                      ? "text-[#2DD36F]"
-                      : "text-[#7A9AB5]"
-                  )}>
-                    {workspaceUrl.toLowerCase().includes(tool.name.toLowerCase())
-                      ? '✓ Valid link detected'
-                      : 'Enter a valid ' + tool.name + ' URL to continue'}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => workspaceUrl.toLowerCase().includes(tool.name.toLowerCase()) && setWeDoTask(2)}
-                  disabled={!workspaceUrl.toLowerCase().includes(tool.name.toLowerCase())}
-                  className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
-                >
-                  CONTINUE TO TASK 2 →
-                </button>
+                <ConversationLogInput
+                  value={conversationLog}
+                  onChange={setConversationLog}
+                  minWords={30}
+                  label="Paste Your Test Conversation"
+                />
+                
+                {conversationLog.trim().split(/\s+/).length >= 30 && (
+                  <button
+                    onClick={() => {
+                      addXP(25);
+                      setModuleXP(prev => prev + 25);
+                      saveAnswers({ conversationLog });
+                      setWeDoTask(2);
+                    }}
+                    className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+                  >
+                    Continue to System Prompt →
+                  </button>
+                )}
               </div>
             )}
 
-            {/* Task 2: Write System Prompt */}
+            {/* Task 2: Write System Prompt with IterationRounds */}
             {weDoTask === 2 && (
               <div>
-                <TaskCard title="TASK 2: WRITE YOUR SCOPE SYSTEM PROMPT">
+                <TaskCard title="TASK 2: WRITE YOUR SCOPE SYSTEM PROMPT (WITH ITERATION)">
                   <p className="text-[13px] text-[#9DBBD4] leading-relaxed mb-3">
-                    Write your system prompt for Velara&apos;s AI assistant using SCOPE. Then paste it into your {tool.name} settings and save it.
+                    Write your system prompt for Velara&apos;s AI assistant using SCOPE. You&apos;ll refine it through 2 rounds.
                   </p>
-                  <p className="text-[12px] text-[#7A9AB5]">Minimum 60 words. Cover all five SCOPE elements.</p>
                 </TaskCard>
 
                 <QuickScopeTip tips={SCOPE_TIPS.systemPrompt} />
 
-                <PromptInput
-                  value={wd2Prompt}
-                  onChange={setWd2Prompt}
+                <IterationRounds
+                  rounds={wd2Iterations}
+                  currentRound={wd2CurrentRound}
+                  onRoundChange={setWd2CurrentRound}
+                  onPromptChange={handleWd2PromptChange}
+                  onReflectionChange={handleWd2ReflectionChange}
+                  onSubmit={handleWd2IterationSubmit}
+                  minRounds={2}
+                  maxRounds={2}
                   placeholder="Write your SCOPE-structured system prompt here..."
-                  minWords={30}
-                  onSubmit={handleWd2Submit}
-                  submitted={!!wd2Score}
-                  score={wd2Score}
-                  rows={8}
+                  reflectionPlaceholder="What worked? What SCOPE elements need improvement?"
                 />
 
-                {wd2Score && (
-                  <>
-                    <ScoreGrid criteria={wd2Score} />
-                    
-                    <div className="mt-4 p-4 bg-[rgba(201,168,76,0.06)] border border-[rgba(201,168,76,0.2)] rounded-lg">
-                      <p className="text-[12px] text-[#9DBBD4] mb-3">
-                        Now paste this system prompt into your {tool.name} assistant settings and click Save. Then come back and confirm below.
-                      </p>
-                      <ConfirmCheckbox
-                        checked={wd2Pasted}
-                        onChange={() => setWd2Pasted(true)}
-                        label={`I have pasted my system prompt into ${tool.name} and saved it`}
-                      />
-                    </div>
+                {wd2Iterations.every(r => r.score > 0) && (
+                  <div className="mt-4 p-4 bg-[rgba(201,168,76,0.06)] border border-[rgba(201,168,76,0.2)] rounded-lg">
+                    <p className="text-[12px] text-[#9DBBD4] mb-3">
+                      Now paste your final system prompt into your {tool.name} assistant settings and click Save. Then come back and confirm below.
+                    </p>
+                    <ConfirmCheckbox
+                      checked={wd2Pasted}
+                      onChange={() => setWd2Pasted(true)}
+                      label={`I have pasted my system prompt into ${tool.name} and saved it`}
+                    />
+                  </div>
+                )}
 
-                    {wd2Pasted && (
-                      <button
-                        onClick={() => setWeDoTask(3)}
-                        className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
-                      >
-                        CONTINUE TO TASK 3 →
-                      </button>
-                    )}
-                  </>
+                {wd2Pasted && (
+                  <button
+                    onClick={() => setWeDoTask(3)}
+                    className="w-full mt-4 py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
+                  >
+                    CONTINUE TO TASK 3 →
+                  </button>
                 )}
               </div>
             )}
@@ -1607,7 +1660,6 @@ senior team, who will contact you within 24 hours."`}
                   </div>
                 </TaskCard>
 
-                {/* Refinement */}
                 <TaskCard title="REFINE YOUR SYSTEM PROMPT">
                   <p className="text-[12px] text-[#9DBBD4] mb-3">
                     Based on your test, refine your system prompt. What would you change or add? Write the improved version below:
@@ -1661,7 +1713,6 @@ senior team, who will contact you within 24 hours."`}
           <ProgressBar phase={phase} prepareProgress={prepareProgress} engageStage={engageStage} weDoTask={weDoTask} youDoTask={youDoTask} />
 
           <div className="p-5">
-            {/* Task navigation */}
             <div className="flex gap-1.5 mb-4">
               {[1, 2, 3].map((t) => (
                 <button
@@ -1679,7 +1730,6 @@ senior team, who will contact you within 24 hours."`}
               ))}
             </div>
 
-            {/* Task 1 */}
             {youDoTask === 1 && (
               <div>
                 <TaskCard title="TASK 1: HANDLE A DIFFICULT CUSTOMER">
@@ -1715,7 +1765,6 @@ senior team, who will contact you within 24 hours."`}
               </div>
             )}
 
-            {/* Task 2 */}
             {youDoTask === 2 && (
               <div>
                 <BackButton onClick={() => setYouDoTask(1)} label="Back to Task 1" />
@@ -1755,7 +1804,6 @@ senior team, who will contact you within 24 hours."`}
               </div>
             )}
 
-            {/* Task 3 */}
             {youDoTask === 3 && (
               <div>
                 <BackButton onClick={() => setYouDoTask(2)} label="Back to Task 2" />
@@ -1779,13 +1827,21 @@ senior team, who will contact you within 24 hours."`}
                   rows={5}
                 />
 
-                {/* Portfolio note */}
                 <div className="bg-[rgba(201,168,76,0.06)] border border-[rgba(201,168,76,0.2)] rounded-lg p-4 mb-4">
                   <p className="font-mono text-[10px] font-bold text-[#C9A84C] tracking-widest uppercase mb-2">💼 PORTFOLIO NOTE</p>
                   <p className="text-[12px] text-[#9DBBD4]">
                     Save your chatbot link or screenshot. This is your first deployable AI tool — it goes in your portfolio.
                   </p>
                 </div>
+
+                {/* Self-Assessment Checklist */}
+                <SelfAssessmentChecklist
+                  title="Chatbot Quality Check"
+                  description="Verify your chatbot performs well"
+                  items={selfAssessmentItems}
+                  onChange={setSelfAssessmentItems}
+                  minRequired={3}
+                />
 
                 {wordCount(yd3Reflect) >= 50 && (
                   <button
@@ -1862,18 +1918,62 @@ senior team, who will contact you within 24 hours."`}
       </div>
       <PhaseIndicator currentPhase={phase} onPhaseClick={setPhase} isCompleted={true} />
 
-      <div className="p-5">
-        {/* Module Summary */}
-        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
-          <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">🏆 MODULE COMPLETE</p>
-          <div className="text-center py-4">
-            <span className="font-mono text-[32px] font-bold text-[#C9A84C]">+{moduleXP} XP</span>
-            <p className="text-[12px] text-[#7A9AB5] mt-1">Badge earned: Chatbot Builder</p>
+      <div className="p-5 space-y-6">
+        <div className="text-center py-6">
+          <div className="text-4xl mb-3">🎉</div>
+          <h2 className="font-mono text-lg font-bold text-[#C9A84C] tracking-wider uppercase mb-2">
+            Module Complete!
+          </h2>
+          <p className="text-[#9DBBD4]">You've built a working customer service chatbot!</p>
+        </div>
+
+        <SkillLevelDisplay
+          level={skillLevel}
+          xp={moduleXP}
+          skillName="Chatbot Building"
+          nextLevelXP={skillLevel === 'bronze' ? 150 : skillLevel === 'silver' ? 300 : undefined}
+        />
+
+        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4">
+          <p className="font-mono text-xs text-[#C9A84C] tracking-wider uppercase mb-2">Module Stats</p>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-white">{moduleXP}</p>
+              <p className="text-xs text-[#3D5870]">XP Earned</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">{averageScore}%</p>
+              <p className="text-xs text-[#3D5870]">Avg Score</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">{TOOLS[selectedTool || 'tidio']?.name || 'Tidio'}</p>
+              <p className="text-xs text-[#3D5870]">Tool Used</p>
+            </div>
           </div>
         </div>
 
-        {/* What You Built */}
-        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+        <ExportPortfolioButton
+          data={{
+            studentName: progress.studentName,
+            studentId: progress.studentId,
+            courseName: 'Productivity & Organisation',
+            moduleName: 'Module 2: Chatbot Building',
+            completedDate: new Date().toLocaleDateString(),
+            xpEarned: moduleXP,
+            skillLevel: skillLevel,
+            badge: 'Chatbot Builder',
+            prompts: [
+              { title: 'System Prompt v1', prompt: wd2Iterations[0]?.prompt || '', score: wd2Iterations[0]?.score, maxScore: 6 },
+              { title: 'System Prompt v2 (Refined)', prompt: wd2Iterations[1]?.prompt || '', score: wd2Iterations[1]?.score, maxScore: 6 },
+            ],
+            reflections: [
+              { question: 'Conversation Log', answer: conversationLog },
+              ...selfAssessmentItems.filter(i => i.checked).map(i => ({ question: i.label, answer: 'Verified' })),
+            ],
+          }}
+        />
+
+        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4">
           <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">✓ WHAT YOU BUILT</p>
           <ul className="space-y-2">
             <li className="flex items-start gap-2 text-[12px] text-[#9DBBD4]">
@@ -1895,8 +1995,7 @@ senior team, who will contact you within 24 hours."`}
           </ul>
         </div>
 
-        {/* Portfolio Reminder */}
-        <div className="bg-[rgba(201,168,76,0.06)] border border-[rgba(201,168,76,0.2)] rounded-lg p-4 mb-4">
+        <div className="bg-[rgba(201,168,76,0.06)] border border-[rgba(201,168,76,0.2)] rounded-lg p-4">
           <p className="font-mono text-[11px] font-bold text-[#C9A84C] tracking-widest uppercase mb-3">💼 BEFORE YOU LEAVE</p>
           <div className="space-y-2">
             <ConfirmCheckbox checked={false} onChange={() => {}} label="Save your chatbot link or take a screenshot" />
@@ -1904,8 +2003,8 @@ senior team, who will contact you within 24 hours."`}
             <ConfirmCheckbox checked={false} onChange={() => {}} label='Add "Chatbot Design" to your LinkedIn skills' />
           </div>
         </div>
-        {/* Try Another Tool */}
-        <div className="bg-[rgba(74,144,217,0.06)] border border-[rgba(74,144,217,0.2)] rounded-lg p-4 mb-4">
+
+        <div className="bg-[rgba(74,144,217,0.06)] border border-[rgba(74,144,217,0.2)] rounded-lg p-4">
           <p className="font-mono text-[11px] font-bold text-[#4A90D9] tracking-widest uppercase mb-3">🔄 TRY ANOTHER TOOL</p>
           <p className="text-[12px] text-[#9DBBD4] leading-relaxed mb-3">
             Want to expand your skills? Build the same chatbot with a different platform.
@@ -1947,8 +2046,8 @@ senior team, who will contact you within 24 hours."`}
               ))}
           </div>
         </div>
-        {/* Next Module Teaser */}
-        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4 mb-4">
+
+        <div className="bg-[#112030] border border-[#1C3348] rounded-lg p-4">
           <p className="font-mono text-[11px] font-bold text-[#4A90D9] tracking-widest uppercase mb-3">🔮 NEXT: MODULE 3 — WORKFLOW AUTOMATION</p>
           <p className="text-[12px] text-[#9DBBD4] leading-relaxed">
             Velara&apos;s systems still don&apos;t talk to each other. A new order comes in. Nothing updates automatically. Staff are copying data between five different platforms.
@@ -1957,7 +2056,11 @@ senior team, who will contact you within 24 hours."`}
         </div>
 
         <button
-          onClick={() => router.push('/course2')}
+          onClick={() => {
+            completeModule2(2);
+            addBadge('chatbot-builder-1');
+            router.push('/course2');
+          }}
           className="w-full py-3 bg-[#C9A84C] text-[#08131E] rounded-md font-mono text-[12px] font-bold tracking-widest uppercase hover:bg-[#E8C96A] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(201,168,76,0.3)] transition-all"
         >
           RETURN TO COURSE →
